@@ -1,9 +1,28 @@
 /* Kirim Doa — service worker: cache aset statik sahaja.
  * Data doa TIDAK dicache (peribadi & sentiasa daripada pelayan; permintaan API ke Google tidak disentuh).
  * Nama cache & senarai aset diisi oleh tools/build-web.js (pemegang tempat di bawah). */
-var CACHE = "kirimdoa-1.5.2-85228132f2";
-var ASSETS = ["./","index.html","config.js","assets/app.90504667b3.js","assets/app.d2e02b9ad6.css","offline.html","manifest.webmanifest","icons/apple-touch-icon.png","icons/favicon-32.png","icons/icon-192.png","icons/icon-512.png","icons/maskable-512.png","icons/shortcut-book.png","icons/shortcut-link.png","icons/shortcut-send.png"];
+var CACHE = "kirimdoa-1.6.0-3fd071c6a9";
+var ASSETS = ["./","index.html","config.js","assets/app.0fce9400f7.js","assets/app.d2e02b9ad6.css","offline.html","manifest.webmanifest","icons/apple-touch-icon.png","icons/badge-72.png","icons/favicon-32.png","icons/icon-192.png","icons/icon-512.png","icons/maskable-512.png","icons/shortcut-book.png","icons/shortcut-link.png","icons/shortcut-send.png"];
 var FIREBASE_SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
+
+// Lencana pada ikon app (nombor belum dibaca) — didaftar SEBELUM Firebase supaya sentiasa berjalan.
+// iPhone (app dipasang) & desktop: nombor pada ikon. Android: pelancar memaparkan titik/nombor
+// berdasarkan notifikasi yang masih ada dalam bar notifikasi.
+self.addEventListener('push', function (e) {
+  var n = NaN;
+  try { var p = e.data && e.data.json(); n = parseInt(p && p.data && p.data.badge, 10); } catch (err) { /* bukan JSON */ }
+  if (!self.navigator || !self.navigator.setAppBadge) return;
+  e.waitUntil((isNaN(n) ? self.navigator.setAppBadge() : n > 0 ? self.navigator.setAppBadge(n) : self.navigator.clearAppBadge()).catch(function () {}));
+});
+
+// Dari app: semua notifikasi telah dibaca → buang notifikasi dari bar & lencana ikon
+self.addEventListener('message', function (e) {
+  if (!e.data || e.data.type !== 'KD_CLEAR_NOTIFICATIONS') return;
+  e.waitUntil(self.registration.getNotifications().then(function (list) {
+    list.forEach(function (n) { n.close(); });
+    if (self.navigator && self.navigator.clearAppBadge) return self.navigator.clearAppBadge().catch(function () {});
+  }));
+});
 
 // Notifikasi telefon (FCM): aktif hanya jika config.js mempunyai konfigurasi Firebase.
 // SDK memaparkan notifikasi latar belakang secara automatik & membuka fcm_options.link apabila diklik.
