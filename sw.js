@@ -1,8 +1,8 @@
 /* Kirim Doa — service worker: cache aset statik sahaja.
  * Data doa TIDAK dicache (peribadi & sentiasa daripada pelayan; permintaan API ke Google tidak disentuh).
- * kirimdoa-1.1.0-4a322847fa dan ["./","index.html","config.js","assets/app.6112447057.js","assets/app.d7e13c0e45.css","offline.html","manifest.webmanifest","icons/apple-touch-icon.png","icons/favicon-32.png","icons/icon-192.png","icons/icon-512.png","icons/maskable-512.png"] diisi oleh tools/build-web.js. */
-   var CACHE = 'kirimdoa-1.1.0-4a322847fa';
-   var ASSETS = ["./","index.html","config.js","assets/app.6112447057.js","assets/app.d7e13c0e45.css","offline.html","manifest.webmanifest","icons/apple-touch-icon.png","icons/favicon-32.png","icons/icon-192.png","icons/icon-512.png","icons/maskable-512.png"];
+ * Nama cache & senarai aset diisi oleh tools/build-web.js (pemegang tempat di bawah). */
+var CACHE = "kirimdoa-1.2.0-5f362ef93f";
+var ASSETS = ["./","index.html","config.js","assets/app.59d243c0ab.js","assets/app.184bbc1fb5.css","offline.html","manifest.webmanifest","icons/apple-touch-icon.png","icons/favicon-32.png","icons/icon-192.png","icons/icon-512.png","icons/maskable-512.png"];
 
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(ASSETS); }).then(function () { return self.skipWaiting(); }));
