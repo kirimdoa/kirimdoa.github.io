@@ -1,4 +1,3 @@
-
 /* ==========================================================================
    Kirim Doa — Design tokens
    Maroon + ungu sebagai warna jenama, krim sebagai kanvas, emas sebagai aksen halus.
@@ -65,7 +64,6 @@
   --safe-t: env(safe-area-inset-top, 0px);
 }
 
-
 /* Reset + asas tipografi */
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
@@ -123,7 +121,6 @@ p { margin: 0; }
 .boot__tag { font-style: italic; opacity: .8; }
 .boot .brand-star { width: 76px; height: 76px; color: var(--gold); animation: kd-spin 18s linear infinite; }
 @keyframes kd-spin { to { transform: rotate(360deg); } }
-
 
 /* ==========================================================================
    Susun atur: shell aplikasi (sidebar + topbar + kandungan + bottom nav)
@@ -186,6 +183,7 @@ p { margin: 0; }
 
 .bottomnav { display: none; }
 .hide-desktop { display: none; }
+.label-mobile { display: none; }
 
 /* Susun atur awam (landing, auth) */
 .public { min-height: 100vh; display: flex; flex-direction: column; }
@@ -194,7 +192,6 @@ p { margin: 0; }
 .public-top .brand .brand-star { width: 32px; height: 32px; color: var(--maroon); }
 .public-foot { margin-top: auto; padding: var(--sp-8); text-align: center; color: var(--muted); font-size: var(--fs-sm); border-top: 1px solid var(--line); }
 .public-foot nav { display: flex; gap: var(--sp-5); justify-content: center; flex-wrap: wrap; margin-bottom: var(--sp-3); }
-
 
 /* ==========================================================================
    Komponen
@@ -363,7 +360,7 @@ p { margin: 0; }
 .modal-wide { width: min(860px, 100%); }
 .modal__head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-5) var(--sp-6); border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--cream); z-index: 1; }
 .modal__body { padding: var(--sp-6); }
-.modal__foot { display: flex; justify-content: flex-end; gap: var(--sp-3); padding: var(--sp-4) var(--sp-6); border-top: 1px solid var(--line); background: var(--cream); position: sticky; bottom: 0; }
+.modal__foot { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--sp-3); padding: var(--sp-4) var(--sp-6); border-top: 1px solid var(--line); background: var(--cream); position: sticky; bottom: 0; }
 @keyframes kd-fade { from { opacity: 0; } }
 
 /* Menu lungsur */
@@ -409,7 +406,6 @@ p { margin: 0; }
 .status-ok { background: var(--success); box-shadow: 0 0 0 4px var(--success-50); }
 .status-bad { background: var(--danger); box-shadow: 0 0 0 4px var(--danger-50); }
 .status-warn { background: var(--gold); box-shadow: 0 0 0 4px #FBF4E0; }
-
 
 /* ==========================================================================
    Paparan khusus: landing, auth, hantar doa, mod baca, Kumpul Doa awam
@@ -553,7 +549,6 @@ p { margin: 0; }
 .toggle input:focus-visible + span { box-shadow: var(--focus); }
 .toggle input:disabled + span { opacity: .5; }
 
-
 /* ==========================================================================
    Responsif (mobile-first diselaraskan di sini) + navigasi bawah PWA
    ========================================================================== */
@@ -591,6 +586,13 @@ p { margin: 0; }
   #toasts { left: var(--sp-4); right: var(--sp-4); bottom: calc(var(--bottomnav-h) + var(--safe-b) + var(--sp-3)); max-width: none; }
   .modal-backdrop { align-items: end; padding: 0; }
   .modal { width: 100%; max-height: 92vh; border-radius: var(--r-lg) var(--r-lg) 0 0; }
+  /* Butang modal tidak terkeluar skrin: tindakan utama baris penuh di atas, yang lain berkongsi baris */
+  .modal__foot { gap: var(--sp-2); padding: var(--sp-3) var(--sp-4) calc(var(--sp-3) + var(--safe-b)); }
+  .modal__foot > .btn { flex: 1 1 auto; justify-content: center; min-width: 0; margin-right: 0 !important; padding-left: var(--sp-3); padding-right: var(--sp-3); }
+  .modal__foot > .btn-gold, .modal__foot > [data-act="prayed"] { order: -1; flex-basis: 100%; }
+  .modal__foot > [data-act="delete"] { order: 9; flex: 0 0 auto; padding-left: var(--sp-3); padding-right: var(--sp-3); }
+  .label-desktop { display: none; }
+  .label-mobile { display: inline; }
 
   .steps, .about { grid-template-columns: 1fr; }
   .steps { gap: var(--sp-8); }
@@ -667,10 +669,79 @@ p { margin: 0; }
 
 .app-panel { display: flex; align-items: center; gap: var(--sp-4); flex-wrap: wrap; }
 .app-panel__icon img { border-radius: 12px; display: block; }
+.push-panel { flex-basis: 100%; display: flex; align-items: center; gap: var(--sp-4); flex-wrap: wrap; padding-top: var(--sp-4); border-top: 1px solid var(--line); }
+.push-panel.hidden { display: none; }
+.push-panel h4 { display: flex; align-items: center; gap: 6px; margin: 0 0 4px; color: var(--maroon-900); }
+.push-prompt { display: flex; align-items: center; gap: var(--sp-3); border-color: var(--gold-200); background: #FFFBEF; }
+.push-prompt.hidden { display: none; }
+.push-prompt > .i { color: var(--gold); flex: none; }
+
+/* Planner Umrah (1.7.0) */
+.um-tabs { margin-bottom: var(--sp-5); max-width: 100%; }
+.um-stack { display: flex; flex-direction: column; gap: var(--sp-4); }
+.um-hero { display: flex; align-items: center; gap: var(--sp-5); flex-wrap: wrap; }
+.um-hero__pct { font-family: var(--font-display); font-size: var(--fs-3xl); color: var(--maroon); line-height: 1; font-variant-numeric: tabular-nums; }
+.um-hero__body { flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: var(--sp-2); }
+.um-track { height: 8px; background: var(--maroon-50); border-radius: var(--r-pill); overflow: hidden; }
+.um-track span { display: block; height: 100%; background: linear-gradient(90deg, var(--maroon), var(--gold)); border-radius: var(--r-pill); transition: width .25s; }
+.um-group { padding: 0; overflow: hidden; }
+.um-group__head { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-3); padding: var(--sp-4) var(--sp-5) var(--sp-3); border-bottom: 1px solid var(--line); }
+.um-group__head h3 { margin: 0; font-size: var(--fs-md); font-family: var(--font-ui); font-weight: 700; color: var(--maroon-900); }
+.um-count { font-size: var(--fs-sm); color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.um-row { display: flex; align-items: flex-start; gap: var(--sp-3); padding: var(--sp-3) var(--sp-5); border-top: 1px solid var(--line); }
+.um-row:first-child { border-top: 0; }
+.um-row input[type=checkbox] { flex: 0 0 22px; width: 22px; height: 22px; margin-top: 2px; accent-color: var(--maroon); cursor: pointer; }
+.um-row__body { flex: 1; min-width: 0; cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+.um-row__title { font-weight: 600; overflow-wrap: anywhere; }
+.um-row__note { font-size: var(--fs-sm); color: var(--muted); overflow-wrap: anywhere; }
+.um-row__date { font-size: var(--fs-xs); color: var(--warn); font-weight: 600; }
+.um-row__date.is-today { color: var(--maroon); }
+.um-row.is-done .um-row__title { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--gold); }
+.um-row .icon-btn { flex: 0 0 auto; }
+.um-sum { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-4); }
+.um-sum .stat { min-width: 0; }
+.um-sum .stat__value { font-variant-numeric: tabular-nums; }
+.um-day { padding: 0; overflow: hidden; }
+.um-day__head { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-3); padding: var(--sp-3) var(--sp-5); background: var(--cream); border-bottom: 1px solid var(--line); }
+.um-day__head h3 { margin: 0; font-size: var(--fs-md); font-family: var(--font-ui); font-weight: 700; }
+.um-day.is-today { border-color: var(--maroon); box-shadow: 0 0 0 1px var(--maroon); }
+.um-act { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: var(--sp-3); padding: var(--sp-3) var(--sp-5); border-top: 1px solid var(--line); align-items: start; }
+.um-act:first-child { border-top: 0; }
+.um-act__time { font-weight: 700; color: var(--maroon); font-variant-numeric: tabular-nums; }
+.um-act__title { font-weight: 600; overflow-wrap: anywhere; }
+.um-act__meta { font-size: var(--fs-sm); color: var(--muted); overflow-wrap: anywhere; }
+.um-exp { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: var(--sp-3); align-items: center; padding: var(--sp-3) var(--sp-5); border-top: 1px solid var(--line); }
+.um-exp:first-child { border-top: 0; }
+.um-exp__amt { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.um-exp__rm { display: block; font-size: var(--fs-xs); color: var(--muted); font-weight: 500; }
+.um-ar { font-family: var(--font-arabic); font-size: 1.55rem; line-height: 2; direction: rtl; text-align: right; margin: 0; color: var(--maroon-900); }
+.um-rumi { font-style: italic; color: var(--muted); margin: 0; }
+.um-steps { display: flex; flex-direction: column; gap: var(--sp-4); margin: 0; padding: 0; list-style: none; counter-reset: s; }
+.um-steps li { counter-increment: s; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: var(--sp-3); align-items: start; }
+.um-steps li::before { content: counter(s); width: 34px; height: 34px; border-radius: 50%; background: var(--maroon); color: var(--gold-200); display: grid; place-items: center; font-weight: 700; font-family: var(--font-display); }
+.um-steps b { display: block; color: var(--maroon-900); }
+.um-list { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: var(--sp-1); }
+.um-start { display: flex; flex-direction: column; gap: var(--sp-4); max-width: 560px; }
+.um-start .row { align-items: flex-end; }
+.um-titipan { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-3); }
+.um-titipan a { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-4); border-radius: var(--r-md); border: 1px solid var(--line); background: var(--white); text-decoration: none; color: var(--maroon-900); font-weight: 600; }
+.um-titipan a:hover { border-color: var(--maroon); }
+.um-titipan a .i { width: 26px; height: 26px; color: var(--purple); }
+.um-titipan small { font-weight: 400; color: var(--muted); }
+.um-dash { display: flex; align-items: center; gap: var(--sp-4); flex-wrap: wrap; }
+.um-dash > .i { width: 36px; height: 36px; color: var(--maroon); }
+.um-dash__body { flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: var(--sp-2); }
+@media (max-width: 720px) {
+  .um-sum { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3); }
+  .um-sum > :first-child { grid-column: 1 / -1; }
+  .um-sum .stat:not(:first-child) .stat__value { font-size: var(--fs-lg); }
+  .um-titipan { grid-template-columns: 1fr; }
+  .um-row, .um-act, .um-exp, .um-group__head, .um-day__head { padding-left: var(--sp-4); padding-right: var(--sp-4); }
+  .um-tabs { display: flex; flex-wrap: nowrap; overflow-x: auto; }
+  .um-tabs button { flex: 0 0 auto; }
+}
 
 @media print {
-
     .sidebar, .topbar, .bottomnav, #toasts, .toolbar, .page-head .row, .pager { display: none !important; }
     .shell { display: block; } .content { padding: 0; max-width: none; } .panel { break-inside: avoid; }
-  
 }

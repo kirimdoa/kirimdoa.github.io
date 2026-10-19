@@ -220,7 +220,6 @@ window.KD = window.KD || {};
 
   KD.utils = { esc, raw, html, Raw, fmtDate, relTime, fmtNum, fmtBytes, todayKey, requestId, qs, qsa, on, debounce, formData, fileToBase64, downloadBase64, toCsv, downloadText, copyText, storage };
 })(window.KD);
-;
 /* ---- bahagian 2 ---- */
 /**
  * KD.api — SATU-SATUNYA lapisan komunikasi dengan backend (google.script.run → api()).
@@ -282,6 +281,11 @@ window.KD = window.KD || {};
     favoriteDoa: (id) => call('doa.favorite', { id }),
     markRead: (ids) => call('doa.markRead', { ids }),
     markPrayed: (id) => call('doa.markPrayed', { id }),
+    // Notifikasi telefon
+    pushStatus: () => call('push.status'),
+    pushRegister: (p) => call('push.register', p),
+    pushUnregister: (p) => call('push.unregister', p),
+    pushTest: () => call('push.test'),
     getAttachment: (id) => call('doa.attachment', { id }),
     exportPdf: (filters) => call('export.pdf', filters),
     // Kumpul Doa
@@ -322,7 +326,6 @@ window.KD = window.KD || {};
     }
   };
 })(window.KD);
-;
 /* ---- bahagian 3 ---- */
 /**
  * KD.ui — komponen UI boleh guna semula: ikon, toast, modal, sahkan, skeleton, kosong, pager, ralat borang.
@@ -473,7 +476,6 @@ window.KD = window.KD || {};
 
   KD.ui = { icon, star, skyline, catIcon, toast, toastError, modal, confirm, skeletonList, skeletonStats, empty, errorState, pager, busy, fieldErrors, statusBadge, roleBadge };
 })(window.KD);
-;
 /* ---- bahagian 4 ---- */
 /**
  * KD.charts — carta SVG ringan tanpa pustaka luar. Setiap carta ada <title> & jadual tersembunyi untuk pembaca skrin.
@@ -561,7 +563,6 @@ window.KD = window.KD || {};
 
   KD.charts = { bars, line, hbars };
 })(window.KD);
-;
 /* ---- bahagian 5 ---- */
 /**
  * KD.pwa — pasang Kirim Doa sebagai aplikasi di telefon.
@@ -691,11 +692,210 @@ window.KD = window.KD || {};
     window.addEventListener('hashchange', () => { if (location.hash.indexOf('#/k/') === 0) hideBanner(); });
     refresh();
     setTimeout(maybeBanner, BANNER_DELAY_MS);
+    syncPush();
+    document.addEventListener('visibilitychange', onVisible);
   }
 
-  KD.pwa = { init, install, showGuide, refresh, available, isStandalone, isIOS, isWeb };
+  // ================================================================ Notifikasi telefon (FCM)
+  const FB_VERSION = '10.14.1';
+  const FB_BASE = 'https:' + '\/\/www.gstatic.com/firebasejs/' + FB_VERSION + '/';
+  const TOKEN_KEY = 'kd.pushToken';
+  const PROMPT_KEY = 'kd.pushPromptDismissedAt';
+  let fbMessaging = null;
+
+  function fbConfig() {
+    const c = window.KIRIM_DOA_CONFIG || {};
+    const f = c.firebase || {};
+    return f.projectId && f.apiKey && f.messagingSenderId && f.appId && c.vapidKey ? { fb: f, vapidKey: c.vapidKey } : null;
+  }
+  const storedToken = () => { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; } };
+  const setStoredToken = (t) => { try { if (t) localStorage.setItem(TOKEN_KEY, t); else localStorage.removeItem(TOKEN_KEY); } catch (e) { /* abaikan */ } };
+  const serverEnabled = () => !!(KD.config && KD.config.PUSH_ENABLED);
+  /** Pilihan "mahu notifikasi" disimpan PER PENGGUNA pada peranti ini — kekal selepas log keluar/masuk. */
+  const wantKey = () => { const u = KD.auth && KD.auth.user && KD.auth.user(); return u && u.id ? 'kd.pushWanted.' + u.id : ''; };
+  const wanted = () => { try { const k = wantKey(); return !!k && localStorage.getItem(k) === '1'; } catch (e) { return false; } };
+  const setWanted = (on) => { try { const k = wantKey(); if (!k) return; if (on) localStorage.setItem(k, '1'); else localStorage.removeItem(k); } catch (e) { /* abaikan */ } };
+  const platform = () => (isIOS() ? 'IOS' : isAndroid() ? 'ANDROID' : 'DESKTOP');
+
+  /**
+   * Keadaan notifikasi peranti ini:
+   * 'unconfigured' | 'unsupported' | 'needs-install' (iPhone belum pasang) | 'denied' | 'on' | 'off'
+   */
+  function pushState() {
+    if (!isWeb() || !fbConfig() || !serverEnabled()) return 'unconfigured';
+    if (isIOS() && !isStandalone()) return 'needs-install';
+    if (!('serviceWorker' in navigator) || !('Notification' in window) || !('PushManager' in window)) return 'unsupported';
+    if (Notification.permission === 'denied') return 'denied';
+    return Notification.permission === 'granted' && (storedToken() || wanted()) ? 'on' : 'off';
+  }
+
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = src; s.async = true;
+      s.onload = resolve; s.onerror = () => reject(new Error('Gagal memuatkan ' + src));
+      document.head.appendChild(s);
+    });
+  }
+
+  async function messaging() {
+    if (fbMessaging) return fbMessaging;
+    if (!window.firebase || !window.firebase.messaging) {
+      await loadScript(FB_BASE + 'firebase-app-compat.js');
+      await loadScript(FB_BASE + 'firebase-messaging-compat.js');
+    }
+    if (!window.firebase.apps.length) window.firebase.initializeApp(fbConfig().fb);
+    fbMessaging = window.firebase.messaging();
+    fbMessaging.onMessage((payload) => {
+      const n = (payload && payload.notification) || {};
+      KD.ui.toast((n.title ? n.title + ': ' : '') + (n.body || 'Notifikasi baharu'));
+      if (KD.app && KD.app.refreshUnread) KD.app.refreshUnread();
+    });
+    return fbMessaging;
+  }
+
+  async function currentToken() {
+    const reg = await navigator.serviceWorker.ready;
+    const m = await messaging();
+    return m.getToken({ vapidKey: fbConfig().vapidKey, serviceWorkerRegistration: reg });
+  }
+
+  /** Mesti dipanggil daripada klik pengguna (kebenaran pelayar). @return {Promise<boolean>} */
+  async function enablePush() {
+    const state = pushState();
+    if (state === 'needs-install') { showGuide(); KD.ui.toast('Pada iPhone, pasang Kirim Doa di skrin utama dahulu, kemudian hidupkan notifikasi dari aplikasi.'); return false; }
+    if (state === 'unconfigured' || state === 'unsupported') { KD.ui.toast('Notifikasi telefon tidak disokong pada pelayar ini.', 'error'); return false; }
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') {
+      KD.ui.toast('Kebenaran notifikasi tidak diberikan. Anda boleh menghidupkannya dalam tetapan pelayar.', 'error');
+      refreshPushUi();
+      return false;
+    }
+    try {
+      const token = await currentToken();
+      if (!token) throw new Error('Tiada token');
+      await KD.api.pushRegister({ token, platform: platform() });
+      setStoredToken(token);
+      setWanted(true);
+      KD.ui.toast('Notifikasi telefon dihidupkan. Anda akan dimaklumkan apabila doa baharu tiba.');
+      refreshPushUi();
+      return true;
+    } catch (err) {
+      console.error('[push]', err);
+      KD.ui.toastError(err && err.code ? err : { message: 'Notifikasi tidak dapat dihidupkan. Cuba lagi sebentar.' });
+      return false;
+    }
+  }
+
+  /**
+   * Butang "Matikan": putuskan peranti daripada akaun DAN lupakan pilihan.
+   * Log keluar (opts.keepPreference): peranti diputuskan di pelayan (orang lain yang log masuk tidak menerima
+   * notifikasi anda), tetapi pilihan diingati — dihidupkan semula secara automatik apabila anda log masuk.
+   */
+  async function disablePush(silent, opts) {
+    const keep = !!(opts && opts.keepPreference);
+    const token = storedToken();
+    setStoredToken('');
+    if (!keep) setWanted(false);
+    if (token) {
+      try { await KD.api.pushUnregister({ token }); } catch (e) { /* sesi mungkin sudah tamat */ }
+      if (!keep) { try { if (fbConfig()) await (await messaging()).deleteToken(); } catch (e) { /* abaikan */ } }
+    }
+    if (!silent) KD.ui.toast('Notifikasi telefon dimatikan untuk peranti ini.');
+    refreshPushUi();
+  }
+
+  /**
+   * Selepas log masuk / buka app: daftar semula peranti tanpa perlu klik — jika pengguna ini pernah
+   * menghidupkan notifikasi pada peranti ini dan kebenaran telefon masih "Allow". Juga mengemas kini token FCM.
+   */
+  async function syncPush() {
+    if (!KD.auth.loggedIn() || pushState() !== 'on') return;
+    try {
+      const token = await currentToken();
+      if (!token) return;
+      await KD.api.pushRegister({ token, platform: platform() });
+      setStoredToken(token);
+      setWanted(true);
+    } catch (e) { /* senyap — pengguna boleh tekan Hidupkan secara manual */ }
+    refreshPushUi();
+  }
+
+  const PUSH_TEXT = {
+    'on': 'Hidup pada peranti ini. Anda akan dimaklumkan apabila doa baharu tiba atau doa anda dibacakan.',
+    'off': 'Dapatkan notifikasi di telefon apabila seseorang mengirim doa kepada anda.',
+    'denied': 'Notifikasi disekat oleh pelayar. Benarkan dalam tetapan pelayar/telefon untuk laman ini, kemudian cuba semula.',
+    'needs-install': 'Pada iPhone, pasang Kirim Doa di skrin utama dahulu, kemudian hidupkan notifikasi dari aplikasi.',
+    'unsupported': 'Pelayar ini tidak menyokong notifikasi telefon. Cuba Google Chrome (Android) atau Safari (iPhone).',
+    'unconfigured': ''
+  };
+
+  /** Kemas kini semua elemen [data-push-panel] dan kad [data-push-prompt]. */
+  function refreshPushUi() {
+    const state = pushState();
+    document.querySelectorAll('[data-push-panel]').forEach((el) => {
+      el.classList.toggle('hidden', state === 'unconfigured');
+      const txt = el.querySelector('[data-push-text]');
+      if (txt) txt.textContent = PUSH_TEXT[state] || '';
+      const on = el.querySelector('[data-push-on]');
+      const off = el.querySelector('[data-push-off]');
+      const test = el.querySelector('[data-push-test]');
+      if (on) on.classList.toggle('hidden', !(state === 'off' || state === 'needs-install'));
+      if (off) off.classList.toggle('hidden', state !== 'on');
+      if (test) test.classList.toggle('hidden', state !== 'on');
+    });
+    document.querySelectorAll('[data-push-prompt]').forEach((el) => {
+      let dismissed = false;
+      try { dismissed = Date.now() - Number(localStorage.getItem(PROMPT_KEY) || 0) < 30 * 86400000; } catch (e) { /* abaikan */ }
+      el.classList.toggle('hidden', state !== 'off' || dismissed);
+    });
+  }
+  function dismissPushPrompt() { try { localStorage.setItem(PROMPT_KEY, String(Date.now())); } catch (e) { /* abaikan */ } refreshPushUi(); }
+
+  /** Pengendali klik dikongsi (dipanggil oleh app shell). */
+  function bindPush(root) {
+    root.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-push-on],[data-push-off],[data-push-test],[data-push-dismiss]');
+      if (!b || !root.contains(b)) return;
+      e.preventDefault();
+      if (b.hasAttribute('data-push-on')) KD.ui.busy(b, enablePush);
+      else if (b.hasAttribute('data-push-off')) KD.ui.busy(b, () => disablePush(false));
+      else if (b.hasAttribute('data-push-dismiss')) dismissPushPrompt();
+      else KD.ui.busy(b, async () => {
+        try { const r = await KD.api.pushTest(); KD.ui.toast(r.sent ? 'Notifikasi ujian dihantar. Semak telefon anda.' : 'Tiada peranti menerima — cuba matikan dan hidupkan semula.'); } catch (err) { KD.ui.toastError(err); }
+      });
+    });
+  }
+
+  // ================================================================ Lencana ikon app
+  /**
+   * Kemas kini nombor pada ikon app (Badging API: iPhone app dipasang, Chrome/Edge desktop).
+   * Apabila tiada lagi notifikasi belum dibaca → buang notifikasi dari bar notifikasi telefon juga
+   * (titik pada ikon Android hilang), seperti WhatsApp selepas mesej dibaca.
+   */
+  function setBadge(count) {
+    if (!isWeb()) return;
+    const n = Math.max(0, Number(count) || 0);
+    try {
+      if ('setAppBadge' in navigator) (n ? navigator.setAppBadge(n) : navigator.clearAppBadge()).catch(() => {});
+    } catch (e) { /* tidak disokong */ }
+    if (n === 0 && 'serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: 'KD_CLEAR_NOTIFICATIONS' });
+    }
+  }
+
+  /** Apabila app dibuka semula dari latar belakang → segarkan kiraan (maks sekali setiap 20 s). */
+  let lastFocusRefresh = 0;
+  function onVisible() {
+    if (document.visibilityState !== 'visible' || !KD.auth.loggedIn()) return;
+    if (Date.now() - lastFocusRefresh < 20000) return;
+    lastFocusRefresh = Date.now();
+    if (KD.app && KD.app.refreshUnread) KD.app.refreshUnread();
+  }
+
+  KD.pwa = { init, install, showGuide, refresh, available, isStandalone, isIOS, isWeb, setBadge,
+    pushState, enablePush, disablePush, syncPush, refreshPushUi, bindPush };
 })(window.KD);
-;
 /* ---- bahagian 6 ---- */
 /**
  * KD.auth (keadaan sesi), KD.router (navigasi hash + kawalan akses UI), KD.app (shell & but).
@@ -737,6 +937,8 @@ window.KD = window.KD || {};
       router.go('/log-masuk');
     },
     async logout() {
+      // Matikan notifikasi telefon peranti ini dahulu (sementara sesi masih sah) — elak notifikasi ke pengguna seterusnya
+      if (KD.pwa) { try { await KD.pwa.disablePush(true, { keepPreference: true }); KD.pwa.setBadge(0); } catch (e) { /* abaikan */ } }
       try { await KD.api.logout(); } catch (e) { /* tetap log keluar di klien */ }
       auth.clear();
       KD.ui.toast('Anda telah log keluar.');
@@ -759,6 +961,7 @@ window.KD = window.KD || {};
     { path: '/kegemaran', view: 'favorites', access: 'user', layout: 'app', title: 'Kegemaran' },
     { path: '/baca', view: 'reader', access: 'user', layout: 'app', title: 'Baca Satu-Persatu' },
     { path: '/kumpul', view: 'links', access: 'user', layout: 'app', title: 'Kumpul Doa' },
+    { path: '/umrah', view: 'umrah', access: 'user', layout: 'app', title: 'Planner Umrah' },
     { path: '/notifikasi', view: 'notifications', access: 'user', layout: 'app', title: 'Notifikasi' },
     { path: '/profil', view: 'profile', access: 'user', layout: 'app', title: 'Profil' },
 
@@ -858,7 +1061,7 @@ window.KD = window.KD || {};
   // ================================================================ APP SHELL
   const USER_NAV = [
     ['/utama', 'home', 'Utama'], ['/hantar', 'send', 'Hantar Doa'], ['/senarai', 'list', 'Senarai Doa'],
-    ['/baca', 'book', 'Baca Satu-Persatu'], ['/kegemaran', 'heart', 'Kegemaran'], ['/kumpul', 'link', 'Kumpul Doa'],
+    ['/baca', 'book', 'Baca Satu-Persatu'], ['/kegemaran', 'heart', 'Kegemaran'], ['/kumpul', 'link', 'Kumpul Doa'], ['/umrah', 'kaaba', 'Planner Umrah'],
     ['/notifikasi', 'bell', 'Notifikasi'], ['/profil', 'user', 'Profil']
   ];
   const ADMIN_NAV = [
@@ -947,8 +1150,17 @@ window.KD = window.KD || {};
         app.docListener = true;
         document.addEventListener('click', () => { const p = qs('[data-user-menu]'); if (p) p.classList.add('hidden'); });
       }
-      app.setUnread(app.unread);
-      if (KD.pwa) KD.pwa.refresh();
+      app.setUnread(app.unread, { local: true });
+      if (KD.pwa) { KD.pwa.refresh(); KD.pwa.refreshPushUi(); }
+    },
+
+    /** Muat semula kiraan notifikasi (cth. selepas notifikasi telefon diterima ketika app dibuka). */
+    async refreshUnread() {
+      try {
+        const me = await KD.api.getCurrentUser();
+        app.setUnread(me.unreadNotifications);
+        if ((location.hash || '').indexOf('#/notifikasi') === 0) router.render();
+      } catch (e) { /* abaikan */ }
     },
 
     updateShell(route) {
@@ -974,10 +1186,13 @@ window.KD = window.KD || {};
       on(m.el, 'click', '[data-act="logout"]', () => { m.close(); auth.logout(); });
     },
 
-    setUnread(n) {
+    /** @param {number} n @param {{local?:boolean}} [opts] local = paparan semula sahaja (bukan kiraan baharu dari pelayan) */
+    setUnread(n, opts) {
       app.unread = n || 0;
       qsa('[data-unread-count]').forEach((el) => { el.textContent = app.unread > 9 ? '9+' : String(app.unread); el.classList.toggle('hidden', !app.unread); });
       qsa('[data-unread-dot]').forEach((el) => el.classList.toggle('hidden', !app.unread));
+      // Lencana ikon app hanya dikemas kini dengan kiraan SEBENAR dari pelayan (elak memadam notifikasi telefon secara tidak sengaja)
+      if (KD.pwa && KD.auth.loggedIn() && !(opts && opts.local)) KD.pwa.setBadge(app.unread);
     },
 
     maintenance(message) {
@@ -1011,6 +1226,7 @@ window.KD = window.KD || {};
         tasks.push(KD.api.getCurrentUser().then((me) => { auth.updateUser(me.user); app.unread = me.unreadNotifications; }).catch((e) => { if (e.code === 'UNAUTHENTICATED') auth.clear(); }));
       }
       await Promise.all(tasks);
+      if (KD.pwa && auth.loggedIn()) KD.pwa.setBadge(app.unread);
 
       const standalone = !!(KD.pwa && KD.pwa.isWeb() && KD.pwa.isStandalone());
       if (share && !(topHash || location.hash)) history.replaceState(null, '', '#/k/' + share);
@@ -1022,7 +1238,7 @@ window.KD = window.KD || {};
       boot.classList.add('is-done');
       setTimeout(() => boot.remove(), 450);
       router.start();
-      if (KD.pwa) KD.pwa.init();
+      if (KD.pwa) { KD.pwa.init(); KD.pwa.bindPush(document.body); }
     },
 
     /** Selepas log masuk: pergi ke laluan yang diminta sebelum ini. */
@@ -1031,6 +1247,7 @@ window.KD = window.KD || {};
       storage.remove('kd.afterLogin');
       app.shellMode = null;
       router.go(next && next.indexOf('/log-masuk') < 0 ? next : (auth.isAdmin() ? '/admin' : '/utama'));
+      if (KD.pwa) KD.pwa.syncPush(); /* hidupkan semula notifikasi telefon jika pernah dipilih pada peranti ini */
     }
   };
 
@@ -1039,7 +1256,6 @@ window.KD = window.KD || {};
   KD.app = app;
   KD.views = KD.views || {};
 })(window.KD);
-;
 /* ---- bahagian 7 ---- */
 /**
  * Paparan awam: Landing, Log Masuk, Daftar, Lupa Kata Laluan, halaman pautan Kumpul Doa.
@@ -1291,7 +1507,7 @@ window.KD = window.KD || {};
           <div class="collect__form">
             <form data-form="collect" novalidate>
               <div class="field"><label class="label" for="c-name">Nama anda</label><input class="input" id="c-name" name="senderName" maxlength="80" autocomplete="name" value="${me ? me.fullName : ''}" placeholder="cth. Mak Long"></div>
-              <div class="field"><label class="label" for="c-cat">Kategori <span class="req">*</span></label><select class="select" id="c-cat" name="categoryId" required><option value="">Pilih kategori doa</option>${link.categories.map((c) => html`<option value="${c.id}">${c.nameMs}</option>`)}</select></div>
+              ${link.categories.length > 1 ? html`<div class="field"><label class="label" for="c-cat">Kategori <span class="req">*</span></label><select class="select" id="c-cat" name="categoryId" required><option value="">Pilih kategori doa</option>${link.categories.map((c) => html`<option value="${c.id}">${c.nameMs}</option>`)}</select></div>` : ''}
               <div class="field"><label class="label" for="c-title">Tajuk (pilihan)</label><input class="input" id="c-title" name="title" maxlength="120" placeholder="cth. Untuk kesihatan mak"></div>
               <div class="field"><label class="label" for="c-text">Isi doa <span class="req">*</span></label><textarea class="textarea" id="c-text" name="doaText" required minlength="${link.doaMinLength}" maxlength="${link.doaMaxLength}" placeholder="Tulis doa atau hajat anda di sini…"></textarea><div class="counter" data-counter>0 / ${link.doaMaxLength}</div></div>
               ${me ? html`<p class="xs muted mt-2">${icon('bell', 'i-sm')} Anda akan menerima notifikasi dalam aplikasi apabila ${link.displayName} membacakan doa anda.</p>`
@@ -1339,7 +1555,6 @@ window.KD = window.KD || {};
     }
   };
 })(window.KD);
-;
 /* ---- bahagian 8 ---- */
 /**
  * Paparan pengguna: Utama, Hantar Doa, Senarai, Kegemaran, Butiran, Baca Satu-Persatu, Kumpul Doa, Notifikasi, Profil.
@@ -1435,10 +1650,10 @@ window.KD = window.KD || {};
       <div class="mt-4" data-wa>${waPrayedButton(d)}</div>`.s;
     const foot = document.createElement('div');
     foot.className = 'modal__foot';
-    foot.innerHTML = html`${d.canDelete ? html`<button class="btn btn-ghost" data-act="delete" style="margin-right:auto;color:var(--danger)">${icon('trash')}Padam</button>` : ''}
+    foot.innerHTML = html`${d.canDelete ? html`<button class="btn btn-ghost" data-act="delete" aria-label="Padam doa" style="margin-right:auto;color:var(--danger)">${icon('trash')}<span class="label-desktop">Padam</span></button>` : ''}
       <button class="btn btn-outline" data-act="share">${icon('share')}Kongsi</button>
       ${d.canEdit ? html`<a class="btn btn-outline" href="#/hantar/${d.id}" data-close>${icon('edit')}Sunting</a>` : ''}
-      <button class="btn ${d.isFavorite ? 'btn-primary' : 'btn-outline'}" data-act="fav">${icon('heart')}${d.isFavorite ? 'Kegemaran' : 'Tambah kegemaran'}</button>
+      <button class="btn ${d.isFavorite ? 'btn-primary' : 'btn-outline'}" data-act="fav">${favLabel(d.isFavorite)}</button>
       ${d.canMarkPrayed ? html`<button class="btn btn-gold" data-act="prayed">${icon('hands')}Tandakan sudah dibacakan</button>` : ''}`.s;
     qs('.modal', m.el).appendChild(foot);
     on(foot, 'click', '[data-act="prayed"]', async (e, b) => {
@@ -1467,7 +1682,7 @@ window.KD = window.KD || {};
         const r = await api.favoriteDoa(d.id);
         d.isFavorite = r.isFavorite;
         b.className = 'btn ' + (r.isFavorite ? 'btn-primary' : 'btn-outline');
-        b.innerHTML = html`${icon('heart')}${r.isFavorite ? 'Kegemaran' : 'Tambah kegemaran'}`.s;
+        b.innerHTML = favLabel(r.isFavorite).s;
         if (onChange) onChange('favorite', r);
       } catch (err) { toastError(err); }
     });
@@ -1478,6 +1693,9 @@ window.KD = window.KD || {};
       try { await api.deleteDoa(d.id); m.close(); toast('Doa telah dipadam.'); if (onChange) onChange('delete', d); } catch (err) { toastError(err); }
     });
   }
+
+  /** Label butang kegemaran — ringkas pada telefon supaya muat sebaris. */
+  const favLabel = (on) => html`${icon('heart')}<span class="label-desktop">${on ? 'Kegemaran' : 'Tambah kegemaran'}</span><span class="label-mobile">Kegemaran</span>`;
 
   /** Status bacaan untuk butiran doa. */
   function prayedStatus(d) {
@@ -1527,7 +1745,7 @@ window.KD = window.KD || {};
       title: 'Export ke PDF',
       body: html`<form data-form="export" novalidate>
         <div class="field"><label class="label" for="x-scope">Doa yang dieksport</label><select class="select" id="x-scope" name="scope">${[['ALL', 'Semua doa'], ['RECEIVED', 'Doa diterima'], ['SELF', 'Untuk diri sendiri'], ['OTHERS', 'Untuk orang lain'], ['FAVORITES', 'Kegemaran']].map((s) => html`<option value="${s[0]}" ${d.scope === s[0] ? raw('selected') : ''}>${s[1]}</option>`)}</select></div>
-        <div class="field"><label class="label" for="x-cat">Kategori</label><select class="select" id="x-cat" name="categoryId"><option value="">Semua kategori</option>${cats.map((c) => html`<option value="${c.id}" ${d.categoryId === c.id ? raw('selected') : ''}>${c.nameMs}</option>`)}</select></div>
+        ${cats.length > 1 ? html`<div class="field"><label class="label" for="x-cat">Kategori</label><select class="select" id="x-cat" name="categoryId"><option value="">Semua kategori</option>${cats.map((c) => html`<option value="${c.id}" ${d.categoryId === c.id ? raw('selected') : ''}>${c.nameMs}</option>`)}</select></div>` : ''}
         <div class="grid grid-2 mt-4"><div class="field"><label class="label" for="x-from">Dari</label><input class="input" type="date" id="x-from" name="from" value="${d.from || ''}"></div><div class="field" style="margin-top:0"><label class="label" for="x-to">Hingga</label><input class="input" type="date" id="x-to" name="to" value="${d.to || ''}"></div></div>
         <p class="hint mt-4">Maksimum 300 doa setiap fail. Fail PDF dijana di pelayan dan dimuat turun terus ke peranti anda.</p></form>`,
       foot: html`<button class="btn btn-outline" data-close>Batal</button><button class="btn btn-primary" data-act="go">${icon('download')}Muat turun PDF</button>`
@@ -1552,16 +1770,21 @@ window.KD = window.KD || {};
     async render(el) {
       const user = KD.auth.user() || {};
       el.innerHTML = html`<div class="welcome"><div><div class="welcome__salam arabic" lang="ar">السلام عليكم</div><h2>Assalamualaikum, ${user.fullName || ''}</h2><p>Semoga hari ini dipermudahkan.</p></div><a class="btn btn-cream" href="#/hantar">${icon('plus')}Hantar Doa</a>${star()}</div>
+        ${KD.pwa && KD.pwa.isWeb() ? html`<div class="push-prompt panel mt-6 hidden" data-push-prompt>${icon('bell')}<div class="grow"><strong>Dapatkan notifikasi di telefon</strong><div class="small muted">Dimaklumkan serta-merta apabila keluarga dan sahabat mengirim doa kepada anda.</div></div>
+          <button class="btn btn-primary btn-sm" data-push-on>Hidupkan</button><button class="icon-btn" data-push-dismiss aria-label="Tutup">${icon('x')}</button></div>` : ''}
         <div class="mt-6" data-stats>${skeletonStats(4)}</div>
         <div class="quick mt-6">
           <a href="#/hantar">${icon('send')}Hantar Doa</a><a href="#/kegemaran">${icon('heart')}Kegemaran</a>
           <a href="#/baca">${icon('book')}Baca Doa</a><a href="#" data-act="export">${icon('pdf')}Export PDF</a>
         </div>
+        <div class="mt-6" data-umrah-card></div>
         <div class="grid grid-main-side mt-6">
           <section class="panel panel-flush"><div class="panel-head"><h3>Doa terkini</h3><a class="small" href="#/senarai">Lihat semua</a></div><div data-recent class="mt-3">${skeletonList(3)}</div></section>
           <section class="panel" data-links-panel><div class="panel-head"><h3>Kumpul Doa</h3><a class="small" href="#/kumpul">Urus</a></div><div data-links>${skeletonList(1)}</div></section>
         </div>`.s;
+      if (KD.pwa) KD.pwa.refreshPushUi();
       on(el, 'click', '[data-act="export"]', (e) => { e.preventDefault(); openExport(); });
+      if (KD.views.umrahDashCard) KD.views.umrahDashCard(qs('[data-umrah-card]', el));
       const load = async () => {
         try {
           const [d, links] = await Promise.all([api.getDashboard(), api.getMyLinks()]);
@@ -1617,7 +1840,7 @@ window.KD = window.KD || {};
               <div class="segmented" role="group" aria-labelledby="lbl-who" data-who>${Object.keys(RECIPIENT_LABEL).map((k) => html`<button type="button" data-type="${k}" aria-pressed="${v.recipientType === k}">${RECIPIENT_LABEL[k]}</button>`)}</div>
               <input type="hidden" name="recipientType" value="${v.recipientType}"></div>
             <div class="field ${v.recipientType === 'SELF' ? 'hidden' : ''}" data-recipient><label class="label" for="d-rname">Nama penerima <span class="req">*</span></label><input class="input" id="d-rname" name="recipientName" maxlength="80" value="${v.recipientType === 'SELF' ? '' : v.recipientName}" placeholder="cth. Ibu, Suami, Kawan sepejabat"></div>
-            <div class="field"><label class="label" for="d-cat">Kategori <span class="req">*</span></label><select class="select" id="d-cat" name="categoryId" required><option value="">Pilih kategori doa</option>${cats.map((c) => html`<option value="${c.id}" ${v.categoryId === c.id ? raw('selected') : ''}>${c.nameMs}</option>`)}</select></div>
+            ${cats.length > 1 ? html`<div class="field"><label class="label" for="d-cat">Kategori <span class="req">*</span></label><select class="select" id="d-cat" name="categoryId" required><option value="">Pilih kategori doa</option>${cats.map((c) => html`<option value="${c.id}" ${v.categoryId === c.id ? raw('selected') : ''}>${c.nameMs}</option>`)}</select></div>` : ''}
             <div class="field"><label class="label" for="d-title">Tajuk</label><input class="input" id="d-title" name="title" maxlength="120" value="${v.title}" placeholder="cth. Semoga sembuh segera"></div>
             <div class="field"><label class="label" for="d-text">Isi doa <span class="req">*</span></label><textarea class="textarea" id="d-text" name="doaText" required maxlength="${maxLen}" placeholder="Tulis doa anda di sini…">${v.text}</textarea><div class="counter" data-counter>${v.text.length} / ${maxLen}</div></div>
             ${!editId && maxFiles ? html`<div class="field"><span class="label">Lampiran (pilihan)</span>
@@ -1714,7 +1937,7 @@ window.KD = window.KD || {};
           ${state.recipientId ? html`<div class="alert alert-info mt-4">${icon('link')}<div class="grow">Menunjukkan doa daripada satu pautan Kumpul Doa.</div><button class="btn-link" data-act="clear-link">Tunjuk semua</button></div>` : ''}
           <div class="toolbar mt-4">
             <div class="search">${icon('search')}<input class="input" type="search" placeholder="Cari doa, tajuk atau nama…" value="${state.q}" data-f="q" aria-label="Cari"></div>
-            <select class="select" data-f="categoryId" aria-label="Kategori"><option value="">Semua kategori</option>${cats.map((c) => html`<option value="${c.id}" ${state.categoryId === c.id ? raw('selected') : ''}>${c.nameMs}</option>`)}</select>
+            ${cats.length > 1 ? html`<select class="select" data-f="categoryId" aria-label="Kategori"><option value="">Semua kategori</option>${cats.map((c) => html`<option value="${c.id}" ${state.categoryId === c.id ? raw('selected') : ''}>${c.nameMs}</option>`)}</select>` : ''}
             <input class="input" type="date" data-f="from" value="${state.from}" aria-label="Dari tarikh">
             <input class="input" type="date" data-f="to" value="${state.to}" aria-label="Hingga tarikh">
             <select class="select" data-f="sort" aria-label="Susunan"><option value="NEWEST">Terbaharu</option><option value="OLDEST" ${state.sort === 'OLDEST' ? raw('selected') : ''}>Terlama</option></select>
@@ -1955,7 +2178,11 @@ window.KD = window.KD || {};
           <div class="grow"><h3>Aplikasi telefon</h3>
             <p class="small muted hidden" data-pwa-installed>${icon('check', 'i-sm')} Anda sedang menggunakan aplikasi Kirim Doa yang dipasang.</p>
             <p class="small muted" data-pwa-hint>Pasang Kirim Doa di skrin utama telefon untuk dibuka dengan satu sentuhan — sesuai dibawa ke Tanah Suci.</p></div>
-          <button class="btn btn-gold hidden" data-pwa-install data-act="pwa-install">${icon('download')}Pasang aplikasi</button></section>` : '';
+          <button class="btn btn-gold hidden" data-pwa-install data-act="pwa-install">${icon('download')}Pasang aplikasi</button>
+          <div class="push-panel hidden" data-push-panel><div class="grow"><h4>${icon('bell', 'i-sm')} Notifikasi telefon</h4><p class="small muted" data-push-text></p></div>
+            <div class="row row-wrap"><button class="btn btn-primary hidden" data-push-on>${icon('bell')}Hidupkan notifikasi</button>
+            <button class="btn btn-outline hidden" data-push-test>${icon('send')}Hantar ujian</button>
+            <button class="btn btn-ghost hidden" data-push-off>Matikan</button></div></div></section>` : '';
       el.innerHTML = html`<div class="page-head"><div><h1>Profil</h1><p>Urus maklumat akaun dan keselamatan anda.</p></div></div>
         ${pwaPanel}
         <div class="grid grid-2">
@@ -1977,7 +2204,7 @@ window.KD = window.KD || {};
             <hr style="border:0;border-top:1px solid var(--line);margin:28px 0 20px">
             <button class="btn btn-outline btn-block" data-act="logout">${icon('logout')}Log keluar</button></section>
         </div>`.s;
-      if (KD.pwa) KD.pwa.refresh();
+      if (KD.pwa) { KD.pwa.refresh(); KD.pwa.refreshPushUi(); }
       on(el, 'submit', 'form', async (e, form) => {
         e.preventDefault();
         const data = formData(form);
@@ -2002,8 +2229,275 @@ window.KD = window.KD || {};
     }
   };
 })(window.KD);
-;
 /* ---- bahagian 9 ---- */
+/**
+ * Planner Umrah: Senarai Semak, Perbelanjaan, Jadual & Ziarah, Titipan Doa (guna Kumpul Doa), Panduan.
+ * Satu laluan #/umrah?tab=… supaya semua dalam satu tempat.
+ * NOTA Apps Script: jangan tulis dua garis condong dalam skrip ini.
+ */
+(function (KD) {
+  'use strict';
+  const { html, raw, qs, on, formData, fmtNum, fmtDate, todayKey } = KD.utils;
+  const { icon, toast, toastError, modal, confirm, skeletonList, empty, errorState, busy, fieldErrors } = KD.ui;
+  const call = KD.api.call;
+
+  const TABS = [['semak', 'list', 'Senarai Semak'], ['belanja', 'coins', 'Perbelanjaan'], ['jadual', 'calendar', 'Jadual'], ['titipan', 'hands', 'Titipan Doa'], ['panduan', 'book', 'Panduan']];
+  const FASA = [['SEBELUM', 'Sebelum'], ['SEMASA', 'Semasa'], ['SELEPAS', 'Selepas']];
+  const KUMPULAN = [['DOKUMEN', 'Dokumen & urusan rasmi'], ['KEWANGAN', 'Kewangan'], ['ROHANI', 'Ilmu & persiapan rohani'], ['KESIHATAN', 'Kesihatan'],
+    ['BARANG', 'Barang bawaan'], ['BERLEPAS', 'Hari berlepas'], ['MIQAT', 'Penerbangan & miqat'], ['IBADAH', 'Ibadah Umrah'], ['MAKKAH', 'Di Makkah'],
+    ['MADINAH', 'Di Madinah'], ['JAGADIRI', 'Jaga diri'], ['PULANG', 'Sebelum pulang'], ['TIBA', 'Tiba di tanah air'], ['AMALAN', 'Kekalkan amalan'], ['LAIN', 'Lain-lain']];
+  const KATEGORI = [['MAKAN', 'Makan & minum'], ['PENGANGKUTAN', 'Pengangkutan'], ['OLEOLE', 'Ole-ole'], ['DAM', 'Dam / fidyah'], ['SEDEKAH', 'Sedekah & infaq'], ['PAKEJ', 'Pakej & persiapan'], ['LAIN', 'Lain-lain']];
+  const LOKASI = [['MAKKAH', 'Makkah'], ['MADINAH', 'Madinah'], ['MALAYSIA', 'Malaysia'], ['PERJALANAN', 'Dalam perjalanan'], ['LAIN', 'Lain-lain']];
+  const JENIS = [['IBADAH', 'Ibadah'], ['ZIARAH', 'Ziarah'], ['PERJALANAN', 'Perjalanan'], ['HOTEL', 'Hotel'], ['MAKAN', 'Makan'], ['LAIN', 'Lain-lain']];
+  const label = (list, v) => (list.filter((x) => x[0] === v)[0] || [v, v || ''])[1];
+  const money = (n, cur) => cur + ' ' + Number(n || 0).toLocaleString('ms-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const options = (list, v) => list.map((o) => html`<option value="${o[0]}" ${o[0] === v ? raw('selected') : ''}>${o[1]}</option>`);
+  const field = (id, lbl, input, req, hint) => html`<div class="field"><label class="label" for="${id}">${lbl}${req ? html` <span class="req">*</span>` : ''}</label>${input}${hint ? html`<span class="hint">${hint}</span>` : ''}</div>`;
+
+  /** Borang dalam modal: simpan → call(action, data) → reload. */
+  function openForm(opts) {
+    const m = modal({ title: opts.title, body: html`<form novalidate>${opts.body}</form>`,
+      foot: html`${opts.id ? html`<button class="btn btn-ghost" data-act="del" style="margin-right:auto">${icon('trash', 'i-sm')}Padam</button>` : ''}<button class="btn btn-outline" data-close>Batal</button><button class="btn btn-primary" data-act="save">Simpan</button>` });
+    const form = qs('form', m.el);
+    form.addEventListener('submit', (e) => e.preventDefault());
+    on(m.el, 'click', '[data-act="save"]', (e, b) => busy(b, async () => {
+      const data = formData(form);
+      if (opts.id) data.id = opts.id;
+      try { await call(opts.action, data); m.close(); toast('Disimpan.'); opts.done(); } catch (err) { if (!fieldErrors(form, err)) toastError(err); }
+    }));
+    on(m.el, 'click', '[data-act="del"]', async () => {
+      m.close();
+      if (!(await confirm({ title: 'Padam rekod?', message: 'Rekod ini akan dipadam terus.', confirmText: 'Padam', danger: true }))) return;
+      try { await call(opts.delAction, { id: opts.id }); toast('Dipadam.'); opts.done(); } catch (err) { toastError(err); }
+    });
+  }
+
+  /* ---- Senarai semak ---- */
+  async function semak(box, query) {
+    let data = null;
+    let fasa = query.fasa || '';
+    const draw = () => {
+      const items = data.items;
+      if (!items.length) {
+        box.innerHTML = html`<section class="panel"><div class="um-start">
+          <div><h3>Mulakan senarai semak Umrah</h3><p class="muted mt-2">Lebih 50 perkara persiapan, dari dokumen hingga amalan selepas pulang. Masukkan tarikh berlepas untuk tarikh sasaran automatik.</p></div>
+          <div class="row row-wrap"><div class="field grow" style="margin:0"><label class="label" for="um-berlepas">Tarikh berlepas (pilihan)</label><input class="input" type="date" id="um-berlepas"></div>
+          <button class="btn btn-primary" data-act="seed">${icon('sparkle')}Jana senarai semak</button></div>
+          <p class="small muted">Atau <a href="#" data-act="add">tambah item sendiri</a>.</p></div></section>`.s;
+        return;
+      }
+      if (!fasa) { const open = FASA.filter((f) => items.some((i) => i.fasa === f[0] && !i.done))[0]; fasa = open ? open[0] : 'SEBELUM'; }
+      const pct = Math.round((100 * data.done) / items.length);
+      const today = todayKey();
+      const inFasa = items.filter((i) => i.fasa === fasa);
+      const groups = KUMPULAN.map((k) => [k, inFasa.filter((i) => i.kumpulan === k[0])]).filter((g) => g[1].length);
+      box.innerHTML = html`<div class="um-stack">
+        <section class="panel um-hero"><div class="um-hero__pct">${pct}%</div><div class="um-hero__body"><strong>${fmtNum(data.done)} daripada ${fmtNum(items.length)} perkara siap</strong>
+          <div class="um-track" role="progressbar" aria-label="Kemajuan persiapan" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></div></div>
+          <button class="btn btn-outline btn-sm" data-act="add">${icon('plus', 'i-sm')}Tambah item</button></section>
+        <div class="segmented" role="group" aria-label="Fasa">${FASA.map((f) => {
+          const all = items.filter((i) => i.fasa === f[0]);
+          return html`<button type="button" data-fasa="${f[0]}" aria-pressed="${f[0] === fasa}">${f[1]} ${all.filter((i) => i.done).length}/${all.length}</button>`;
+        })}</div>
+        ${groups.length ? groups.map((g) => html`<section class="panel um-group">
+          <div class="um-group__head"><h3>${g[0][1]}</h3><span class="um-count">${g[1].filter((i) => i.done).length}/${g[1].length}</span></div>
+          <div>${g[1].map((i) => html`<div class="um-row ${i.done ? 'is-done' : ''}">
+            <input type="checkbox" id="cb-${i.id}" data-tick="${i.id}" ${i.done ? raw('checked') : ''}>
+            <label class="um-row__body" for="cb-${i.id}"><span class="um-row__title">${i.perkara}</span>
+              ${i.catatan ? html`<span class="um-row__note">${i.catatan}</span>` : ''}
+              ${i.tarikhSasar && !i.done ? html`<span class="um-row__date ${i.tarikhSasar === today ? 'is-today' : ''}">${i.tarikhSasar === today ? 'Hari ini' : (i.tarikhSasar < today ? 'Lewat · ' : 'Sasaran · ') + fmtDate(i.tarikhSasar)}</span>` : ''}</label>
+            <button class="icon-btn" data-edit="${i.id}" aria-label="Sunting ${i.perkara}">${icon('edit', 'i-sm')}</button></div>`)}</div></section>`)
+          : html`<div class="panel">${empty('Tiada item dalam fasa ini', 'Tambah item sendiri jika perlu.')}</div>`}
+      </div>`.s;
+    };
+    const load = async () => {
+      try { data = await call('umrah.semak.list'); draw(); } catch (err) { box.innerHTML = errorState(err, 'reload').s; }
+    };
+    const form = (i) => openForm({
+      title: i ? 'Sunting item' : 'Tambah item', id: i && i.id, action: 'umrah.semak.save', delAction: 'umrah.semak.delete', done: load,
+      body: html`${field('s-perkara', 'Perkara', html`<input class="input" id="s-perkara" name="perkara" maxlength="150" required value="${i ? i.perkara : ''}">`, true)}
+        ${field('s-fasa', 'Fasa', html`<select class="select" id="s-fasa" name="fasa">${options(FASA, i ? i.fasa : (fasa || 'SEBELUM'))}</select>`)}
+        ${field('s-kumpulan', 'Kumpulan', html`<select class="select" id="s-kumpulan" name="kumpulan">${options(KUMPULAN, i ? i.kumpulan : 'LAIN')}</select>`)}
+        ${field('s-tarikh', 'Tarikh sasaran', html`<input class="input" type="date" id="s-tarikh" name="tarikhSasar" value="${i ? i.tarikhSasar : ''}">`)}
+        ${field('s-catatan', 'Catatan', html`<textarea class="textarea" id="s-catatan" name="catatan" maxlength="500" style="min-height:80px">${i ? i.catatan : ''}</textarea>`)}`
+    });
+    on(box, 'click', '[data-fasa]', (e, b) => { fasa = b.getAttribute('data-fasa'); KD.router.setQuery({ tab: 'semak', fasa }); draw(); });
+    on(box, 'click', '[data-act="reload"]', load);
+    on(box, 'click', '[data-act="add"]', (e) => { e.preventDefault(); form(null); });
+    on(box, 'click', '[data-edit]', (e, b) => form(data.items.filter((x) => x.id === b.getAttribute('data-edit'))[0]));
+    on(box, 'click', '[data-act="seed"]', (e, b) => busy(b, async () => {
+      try {
+        const d = qs('#um-berlepas', box).value;
+        data = await call('umrah.semak.seed', d ? { tarikhBerlepas: d } : {});
+        toast(data.total + ' item ditambah.'); fasa = ''; draw();
+      } catch (err) { toastError(err); }
+    }));
+    on(box, 'change', '[data-tick]', async (e, cb) => {
+      const id = cb.getAttribute('data-tick');
+      cb.disabled = true;
+      try {
+        const res = await call('umrah.semak.toggle', { id, done: cb.checked });
+        const it = data.items.filter((x) => x.id === id)[0];
+        if (it.done !== res.done) data.done += res.done ? 1 : -1;
+        Object.assign(it, res); draw();
+      } catch (err) { cb.checked = !cb.checked; cb.disabled = false; toastError(err); }
+    });
+    box.innerHTML = skeletonList(4).s;
+    await load();
+  }
+
+  /* ---- Perbelanjaan ---- */
+  async function belanja(box) {
+    let data = null;
+    const draw = () => {
+      const s = data.ringkasan;
+      const cats = KATEGORI.filter((k) => s.kategori[k[0]]).sort((a, b) => s.kategori[b[0]] - s.kategori[a[0]]);
+      const max = cats.length ? Math.max.apply(null, cats.map((k) => s.kategori[k[0]])) : 1;
+      box.innerHTML = html`<div class="um-stack">
+        <div class="row spread row-wrap"><p class="muted" style="margin:0">Anggaran RM mengikut kadar 1 SAR = RM ${s.kadar}.</p><button class="btn btn-primary" data-act="add">${icon('plus')}Rekod belanja</button></div>
+        ${data.items.length ? html`<div class="um-sum">
+            <div class="stat"><div class="stat__label">${icon('coins')}Jumlah anggaran</div><div class="stat__value">${money(s.jumlahRm, 'RM')}</div><div class="stat__note">${fmtNum(s.bilangan)} rekod</div></div>
+            <div class="stat"><div class="stat__label">Dalam Riyal</div><div class="stat__value">${money(s.sar, 'SAR')}</div></div>
+            <div class="stat"><div class="stat__label">Dalam Ringgit</div><div class="stat__value">${money(s.rm, 'RM')}</div></div></div>
+          <section class="panel"><div class="panel-head"><h3>Mengikut kategori (RM)</h3></div>
+            <div class="hbars mt-4">${cats.map((k) => html`<div class="hbar"><span>${k[1]}</span><span class="hbar__track"><span class="hbar__fill" style="width:${(100 * s.kategori[k[0]] / max).toFixed(1)}%"></span></span><span class="hbar__val">${fmtNum(Math.round(s.kategori[k[0]]))}</span></div>`)}</div></section>
+          <section class="panel panel-flush"><div>${data.items.map((i) => html`<div class="um-exp">
+            <div style="min-width:0"><div class="um-row__title">${i.perkara}</div><div class="um-row__note">${[label(KATEGORI, i.kategori), label(LOKASI, i.lokasi), i.tarikh ? fmtDate(i.tarikh) : ''].filter(Boolean).join(' · ')}</div></div>
+            <div class="um-exp__amt">${money(i.jumlah, i.matawang)}${i.matawang === 'SAR' ? html`<span class="um-exp__rm">≈ ${money(i.jumlahRm, 'RM')}</span>` : ''}</div>
+            <button class="icon-btn" data-edit="${i.id}" aria-label="Sunting ${i.perkara}">${icon('edit', 'i-sm')}</button></div>`)}</div></section>`
+          : html`<div class="panel">${empty('Belum ada rekod belanja', 'Catat belanja makan, ole-ole, dam dan sedekah. Jumlah dalam Riyal ditukar ke anggaran RM.')}</div>`}
+      </div>`.s;
+    };
+    const load = async () => { try { data = await call('umrah.belanja.list'); draw(); } catch (err) { box.innerHTML = errorState(err, 'reload').s; } };
+    const form = (i) => openForm({
+      title: i ? 'Sunting belanja' : 'Rekod belanja', id: i && i.id, action: 'umrah.belanja.save', delAction: 'umrah.belanja.delete', done: load,
+      body: html`${field('b-perkara', 'Perkara', html`<input class="input" id="b-perkara" name="perkara" maxlength="120" required value="${i ? i.perkara : ''}" placeholder="cth. Kurma Ajwa 1kg">`, true)}
+        <div class="row row-wrap" style="align-items:flex-start">
+          <div class="grow">${field('b-jumlah', 'Jumlah', html`<input class="input" id="b-jumlah" name="jumlah" inputmode="decimal" required value="${i ? String(i.jumlah) : ''}" placeholder="0.00">`, true)}</div>
+          <div style="width:110px">${field('b-mw', 'Mata wang', html`<select class="select" id="b-mw" name="matawang">${options([['SAR', 'SAR'], ['RM', 'RM']], i ? i.matawang : 'SAR')}</select>`)}</div></div>
+        ${field('b-kat', 'Kategori', html`<select class="select" id="b-kat" name="kategori">${options(KATEGORI, i ? i.kategori : 'MAKAN')}</select>`)}
+        ${field('b-lokasi', 'Lokasi', html`<select class="select" id="b-lokasi" name="lokasi">${options(LOKASI, i ? i.lokasi : 'MAKKAH')}</select>`)}
+        ${field('b-tarikh', 'Tarikh', html`<input class="input" type="date" id="b-tarikh" name="tarikh" value="${i ? i.tarikh : todayKey()}">`)}
+        ${field('b-catatan', 'Catatan', html`<textarea class="textarea" id="b-catatan" name="catatan" maxlength="500" style="min-height:70px">${i ? i.catatan : ''}</textarea>`)}`
+    });
+    on(box, 'click', '[data-act="reload"]', load);
+    on(box, 'click', '[data-act="add"]', () => form(null));
+    on(box, 'click', '[data-edit]', (e, b) => form(data.items.filter((x) => x.id === b.getAttribute('data-edit'))[0]));
+    box.innerHTML = skeletonList(3).s;
+    await load();
+  }
+
+  /* ---- Jadual & ziarah ---- */
+  async function jadual(box) {
+    let data = null;
+    const draw = () => {
+      const days = [];
+      data.items.forEach((i) => { const last = days[days.length - 1]; if (last && last[0] === i.tarikh) last[1].push(i); else days.push([i.tarikh, [i]]); });
+      const today = todayKey();
+      box.innerHTML = html`<div class="um-stack">
+        <div class="row spread row-wrap"><p class="muted" style="margin:0">Itinerari daripada agensi: penerbangan, hotel, ziarah dan ibadah.</p><button class="btn btn-primary" data-act="add">${icon('plus')}Tambah aktiviti</button></div>
+        ${days.length ? days.map((g) => html`<section class="panel um-day ${g[0] === today ? 'is-today' : ''}">
+            <div class="um-day__head"><h3>${fmtDate(g[0])}</h3>${g[0] === today ? html`<span class="badge badge-maroon">Hari ini</span>` : ''}</div>
+            <div>${g[1].map((i) => html`<div class="um-act"><span class="um-act__time">${i.masa || '–'}</span>
+              <div><div class="um-act__title">${i.aktiviti}</div><div class="um-act__meta">${[label(LOKASI, i.bandar), label(JENIS, i.jenis), i.tempat].filter(Boolean).join(' · ')}</div>
+                ${i.hubungi ? html`<div class="um-act__meta">${icon('user', 'i-sm')} ${i.hubungi}</div>` : ''}${i.catatan ? html`<div class="um-act__meta">${i.catatan}</div>` : ''}</div>
+              <button class="icon-btn" data-edit="${i.id}" aria-label="Sunting ${i.aktiviti}">${icon('edit', 'i-sm')}</button></div>`)}</div></section>`)
+          : html`<div class="panel">${empty('Belum ada aktiviti', 'Masukkan jadual harian di Makkah dan Madinah.')}</div>`}
+      </div>`.s;
+    };
+    const load = async () => { try { data = await call('umrah.jadual.list'); draw(); } catch (err) { box.innerHTML = errorState(err, 'reload').s; } };
+    const form = (i) => openForm({
+      title: i ? 'Sunting aktiviti' : 'Tambah aktiviti', id: i && i.id, action: 'umrah.jadual.save', delAction: 'umrah.jadual.delete', done: load,
+      body: html`${field('j-akt', 'Aktiviti', html`<input class="input" id="j-akt" name="aktiviti" maxlength="120" required value="${i ? i.aktiviti : ''}" placeholder="cth. Ziarah Masjid Quba'">`, true)}
+        <div class="row row-wrap" style="align-items:flex-start"><div class="grow">${field('j-tarikh', 'Tarikh', html`<input class="input" type="date" id="j-tarikh" name="tarikh" required value="${i ? i.tarikh : todayKey()}">`, true)}</div>
+          <div style="width:130px">${field('j-masa', 'Masa', html`<input class="input" type="time" id="j-masa" name="masa" value="${i ? i.masa : ''}">`)}</div></div>
+        ${field('j-bandar', 'Bandar', html`<select class="select" id="j-bandar" name="bandar">${options(LOKASI, i ? i.bandar : 'MAKKAH')}</select>`)}
+        ${field('j-jenis', 'Jenis', html`<select class="select" id="j-jenis" name="jenis">${options(JENIS, i ? i.jenis : 'IBADAH')}</select>`)}
+        ${field('j-tempat', 'Tempat / alamat', html`<input class="input" id="j-tempat" name="tempat" maxlength="200" value="${i ? i.tempat : ''}">`)}
+        ${field('j-hub', 'No. telefon (mutawwif / hotel)', html`<input class="input" type="tel" id="j-hub" name="hubungi" value="${i ? i.hubungi : ''}">`)}
+        ${field('j-cat', 'Catatan', html`<textarea class="textarea" id="j-cat" name="catatan" maxlength="500" style="min-height:70px">${i ? i.catatan : ''}</textarea>`)}`
+    });
+    on(box, 'click', '[data-act="reload"]', load);
+    on(box, 'click', '[data-act="add"]', () => form(null));
+    on(box, 'click', '[data-edit]', (e, b) => form(data.items.filter((x) => x.id === b.getAttribute('data-edit'))[0]));
+    box.innerHTML = skeletonList(3).s;
+    await load();
+  }
+
+  /* ---- Titipan doa (Kumpul Doa sedia ada) ---- */
+  function titipan(box) {
+    box.innerHTML = html`<div class="um-stack">
+      <section class="panel"><h3>Titipan doa keluarga & sahabat</h3>
+        <p class="muted mt-2">Cipta pautan Kumpul Doa dan kongsikan melalui WhatsApp. Keluarga mengirim hajat tanpa perlu mendaftar. Di Tanah Suci, baca satu persatu dan tanda "Telah dibacakan" supaya pengirim dimaklumkan.</p></section>
+      <div class="um-titipan">
+        <a href="#/kumpul">${icon('link')}Kumpul Doa<small>Cipta & kongsi pautan titipan</small></a>
+        <a href="#/senarai?scope=RECEIVED">${icon('inbox')}Doa diterima<small>Semua titipan yang masuk</small></a>
+        <a href="#/baca">${icon('book')}Baca satu-persatu<small>Mod bacaan di Multazam, Raudhah, Safa-Marwah</small></a>
+      </div></div>`.s;
+  }
+
+  /* ---- Panduan ---- */
+  function panduan(box) {
+    box.innerHTML = html`<div class="um-stack" style="max-width:780px">
+      <section class="panel um-stack"><h3>Langkah Umrah</h3>
+        <ol class="um-steps">
+          <li><div><b>Ihram di miqat</b>Mandi sunat, pakai ihram, solat sunat ihram jika berpeluang, kemudian berniat Umrah sebelum melepasi miqat.</div></li>
+          <li><div><b>Tawaf 7 pusingan</b>Mula dari garisan Hajarul Aswad dengan Ka'bah di sebelah kiri. Lelaki ber-idtiba' dan ramal pada 3 pusingan pertama.</div></li>
+          <li><div><b>Solat sunat Tawaf & minum Zamzam</b>Solat 2 rakaat di belakang Maqam Ibrahim atau di mana-mana ruang, kemudian minum Zamzam dan berdoa.</div></li>
+          <li><div><b>Sa'ie 7 kali</b>Bermula di bukit Safa dan berakhir di Marwah. Lelaki berlari-lari anak di antara dua lampu hijau.</div></li>
+          <li><div><b>Tahallul</b>Lelaki bercukur atau bergunting; wanita memotong hujung rambut sekurang-kurangnya 3 helai. Umrah selesai.</div></li>
+        </ol></section>
+      <section class="panel um-stack"><h3>Lafaz niat Umrah</h3>
+        <p class="um-ar" lang="ar">نَوَيْتُ الْعُمْرَةَ وَأَحْرَمْتُ بِهَا لِلّٰهِ تَعَالَى</p>
+        <p class="um-rumi">Nawaitul 'umrata wa ahramtu biha lillahi ta'ala.</p>
+        <p style="margin:0">Sahaja aku berniat Umrah dan berihram dengannya kerana Allah Ta'ala.</p></section>
+      <section class="panel um-stack"><h3>Talbiah</h3>
+        <p class="um-ar" lang="ar">لَبَّيْكَ اللّٰهُمَّ لَبَّيْكَ، لَبَّيْكَ لَا شَرِيْكَ لَكَ لَبَّيْكَ، إِنَّ الْحَمْدَ وَالنِّعْمَةَ لَكَ وَالْمُلْكَ، لَا شَرِيْكَ لَكَ</p>
+        <p class="um-rumi">Labbaik Allahumma labbaik, labbaika la syarika laka labbaik, innal hamda wan ni'mata laka wal mulk, la syarika lak.</p>
+        <p class="small muted" style="margin:0">Dibaca selepas berniat ihram hingga mula Tawaf.</p></section>
+      <section class="panel um-stack"><h3>Larangan ketika ihram</h3>
+        <ul class="um-list">
+          <li>Memakai wangian pada badan atau pakaian</li>
+          <li>Memotong atau mencabut rambut dan bulu, serta memotong kuku</li>
+          <li>Lelaki: memakai pakaian berjahit yang melingkungi badan dan menutup kepala</li>
+          <li>Wanita: menutup muka dan memakai sarung tangan</li>
+          <li>Memburu atau membunuh binatang buruan darat</li>
+          <li>Akad nikah, bercumbu dan bersetubuh</li>
+          <li>Bertengkar, mencarut dan berbuat maksiat</li>
+        </ul>
+        <p class="small muted" style="margin:0">Larangan tamat selepas tahallul. Rujuk mutawwif jika terlanggar larangan; sebahagiannya dikenakan dam.</p></section>
+      <div class="alert alert-info">Panduan ringkas ini sebagai peringatan. Ikut bimbingan mutawwif dan kursus Umrah anda untuk hukum yang lebih terperinci.</div>
+    </div>`.s;
+  }
+
+  const RENDER = { semak, belanja, jadual, titipan, panduan };
+
+  KD.views.umrah = {
+    async render(el, params, query) {
+      const tab = RENDER[query.tab] ? query.tab : 'semak';
+      el.innerHTML = html`<div class="page-head"><div><h1>Planner Umrah</h1><p>Persiapan, perbelanjaan, jadual dan titipan doa dalam satu tempat.</p></div></div>
+        <div class="segmented um-tabs" role="tablist" aria-label="Bahagian">${TABS.map((t) => html`<button type="button" role="tab" data-tab="${t[0]}" aria-pressed="${t[0] === tab}" aria-selected="${t[0] === tab}">${t[2]}</button>`)}</div>
+        <div data-um-body></div>`.s;
+      on(el, 'click', '[data-tab]', (e, b) => KD.router.go('/umrah?tab=' + b.getAttribute('data-tab')));
+      await RENDER[tab](qs('[data-um-body]', el), query);
+    }
+  };
+
+  /** Kad ringkas di Utama: kemajuan senarai semak. */
+  KD.views.umrahDashCard = async function (box) {
+    if (!box) return;
+    try {
+      const d = await call('umrah.semak.list');
+      const pct = d.total ? Math.round((100 * d.done) / d.total) : 0;
+      box.innerHTML = html`<section class="panel um-dash">${icon('kaaba')}
+        <div class="um-dash__body"><strong>Planner Umrah</strong>${d.total
+          ? html`<div class="small muted">${fmtNum(d.done)} daripada ${fmtNum(d.total)} persiapan siap (${pct}%)</div><div class="um-track"><span style="width:${pct}%"></span></div>`
+          : html`<div class="small muted">Senarai semak, perbelanjaan, jadual dan panduan Umrah.</div>`}</div>
+        <a class="btn btn-outline btn-sm" href="#/umrah">${d.total ? 'Buka' : 'Mula'}</a></section>`.s;
+    } catch (e) { box.innerHTML = ''; }
+  };
+})(window.KD);
+/* ---- bahagian 10 ---- */
 /**
  * Paparan pentadbir. Semua tindakan disahkan semula di backend (RBAC + audit).
  */
@@ -2412,12 +2906,11 @@ window.KD = window.KD || {};
     }
   };
 })(window.KD);
-;
-/* ---- bahagian 10 ---- */
+/* ---- bahagian 11 ---- */
 window.addEventListener('error', function (e) { console.error('[kd]', e.message); });
     KD.app.boot();
 ;
-/* ---- bahagian 11 ---- */
+/* ---- bahagian 12 ---- */
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function (e) { console.warn('SW gagal', e); }); });
 }
