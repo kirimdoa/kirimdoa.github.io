@@ -2249,6 +2249,9 @@ window.KD = window.KD || {};
   const KATEGORI = [['MAKAN', 'Makan & minum'], ['PENGANGKUTAN', 'Pengangkutan'], ['OLEOLE', 'Ole-ole'], ['DAM', 'Dam / fidyah'], ['SEDEKAH', 'Sedekah & infaq'], ['PAKEJ', 'Pakej & persiapan'], ['LAIN', 'Lain-lain']];
   const LOKASI = [['MAKKAH', 'Makkah'], ['MADINAH', 'Madinah'], ['MALAYSIA', 'Malaysia'], ['PERJALANAN', 'Dalam perjalanan'], ['LAIN', 'Lain-lain']];
   const JENIS = [['IBADAH', 'Ibadah'], ['ZIARAH', 'Ziarah'], ['PERJALANAN', 'Perjalanan'], ['HOTEL', 'Hotel'], ['MAKAN', 'Makan'], ['LAIN', 'Lain-lain']];
+  /** Hari dari hari ini ke tarikh (YYYY-MM-DD). */
+  const daysTo = (key) => Math.round((new Date(key + 'T00:00:00Z') - new Date(todayKey() + 'T00:00:00Z')) / 86400000);
+  const countdown = (key) => { const n = daysTo(key); return n > 1 ? n + ' hari lagi' : n === 1 ? 'Esok' : n === 0 ? 'Hari ini, selamat berangkat' : 'Hari ke-' + (1 - n) + ' perjalanan'; };
   const label = (list, v) => (list.filter((x) => x[0] === v)[0] || [v, v || ''])[1];
   const money = (n, cur) => cur + ' ' + Number(n || 0).toLocaleString('ms-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const options = (list, v) => list.map((o) => html`<option value="${o[0]}" ${o[0] === v ? raw('selected') : ''}>${o[1]}</option>`);
@@ -2291,7 +2294,13 @@ window.KD = window.KD || {};
       const today = todayKey();
       const inFasa = items.filter((i) => i.fasa === fasa);
       const groups = KUMPULAN.map((k) => [k, inFasa.filter((i) => i.kumpulan === k[0])]).filter((g) => g[1].length);
+      const dep = data.tarikhBerlepas;
       box.innerHTML = html`<div class="um-stack">
+        <section class="panel um-trip ${dep ? '' : 'is-unset'}">${icon('plane')}
+          <div class="um-trip__body"><span class="um-trip__label">Tarikh berlepas</span>
+            ${dep ? html`<span class="um-trip__date" data-berlepas>${fmtDate(dep)}</span><span class="um-trip__count">${countdown(dep)}</span>`
+              : html`<span class="um-trip__date">Belum ditetapkan</span><span class="small muted">Tetapkan untuk tarikh sasaran automatik.</span>`}</div>
+          <button class="btn ${dep ? 'btn-outline' : 'btn-primary'} btn-sm" data-act="berlepas">${icon(dep ? 'edit' : 'calendar', 'i-sm')}${dep ? 'Ubah' : 'Tetapkan'}</button></section>
         <section class="panel um-hero"><div class="um-hero__pct">${pct}%</div><div class="um-hero__body"><strong>${fmtNum(data.done)} daripada ${fmtNum(items.length)} perkara siap</strong>
           <div class="um-track" role="progressbar" aria-label="Kemajuan persiapan" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></div></div>
           <button class="btn btn-outline btn-sm" data-act="add">${icon('plus', 'i-sm')}Tambah item</button></section>
@@ -2318,9 +2327,41 @@ window.KD = window.KD || {};
       body: html`${field('s-perkara', 'Perkara', html`<input class="input" id="s-perkara" name="perkara" maxlength="150" required value="${i ? i.perkara : ''}">`, true)}
         ${field('s-fasa', 'Fasa', html`<select class="select" id="s-fasa" name="fasa">${options(FASA, i ? i.fasa : (fasa || 'SEBELUM'))}</select>`)}
         ${field('s-kumpulan', 'Kumpulan', html`<select class="select" id="s-kumpulan" name="kumpulan">${options(KUMPULAN, i ? i.kumpulan : 'LAIN')}</select>`)}
-        ${field('s-tarikh', 'Tarikh sasaran', html`<input class="input" type="date" id="s-tarikh" name="tarikhSasar" value="${i ? i.tarikhSasar : ''}">`)}
+        ${field('s-tarikh', 'Tarikh sasaran', html`<input class="input" type="date" id="s-tarikh" name="tarikhSasar" value="${i ? i.tarikhSasar : ''}">`, false,
+          data.tarikhBerlepas ? 'Tarikh ini ikut beranjak jika tarikh berlepas diubah.' : '')}
         ${field('s-catatan', 'Catatan', html`<textarea class="textarea" id="s-catatan" name="catatan" maxlength="500" style="min-height:80px">${i ? i.catatan : ''}</textarea>`)}`
     });
+    const berlepasForm = () => {
+      const lama = data.tarikhBerlepas;
+      const m = modal({ title: lama ? 'Ubah tarikh berlepas' : 'Tetapkan tarikh berlepas',
+        body: html`<form novalidate>
+          ${field('bp-tarikh', 'Tarikh berlepas', html`<input class="input" type="date" id="bp-tarikh" name="tarikhBerlepas" required value="${lama || ''}">`, true,
+            'Tarikh sasaran senarai semak (cth. pasport H-5, beg H-2) dikira semula. Item yang anda tetapkan tarikh sendiri tanpa tarikh berlepas tidak diubah.')}
+          ${lama ? html`<label class="check mt-3"><input type="checkbox" name="anjakJadual" id="bp-jadual" checked>Anjakkan juga tarikh aktiviti dalam Jadual</label>
+            <p class="small muted mt-2" data-beza></p>` : ''}
+        </form>`,
+        foot: html`<button class="btn btn-outline" data-close>Batal</button><button class="btn btn-primary" data-act="save">Simpan</button>` });
+      const form = qs('form', m.el);
+      form.addEventListener('submit', (e) => e.preventDefault());
+      const beza = qs('[data-beza]', m.el);
+      const showBeza = () => {
+        const v = qs('#bp-tarikh', m.el).value;
+        if (!beza) return;
+        if (!v || !lama || v === lama) { beza.textContent = ''; return; }
+        const n = Math.round((new Date(v + 'T00:00:00Z') - new Date(lama + 'T00:00:00Z')) / 86400000);
+        beza.textContent = (n > 0 ? 'Ditunda ' + n : 'Dipercepat ' + (-n)) + ' hari berbanding ' + fmtDate(lama) + '.';
+      };
+      qs('#bp-tarikh', m.el).addEventListener('input', showBeza);
+      on(m.el, 'click', '[data-act="save"]', (e, b) => busy(b, async () => {
+        const v = formData(form);
+        try {
+          const res = await call('umrah.berlepas.set', { tarikhBerlepas: v.tarikhBerlepas, anjakJadual: !!v.anjakJadual });
+          data = res; m.close(); draw();
+          toast('Tarikh berlepas: ' + fmtDate(res.tarikhBerlepas) + '. ' + res.dianjak + ' tarikh sasaran dikemas kini' + (res.jadualDianjak ? ', ' + res.jadualDianjak + ' aktiviti jadual dianjak.' : '.'));
+        } catch (err) { if (!fieldErrors(form, err)) toastError(err); }
+      }));
+    };
+    on(box, 'click', '[data-act="berlepas"]', () => berlepasForm());
     on(box, 'click', '[data-fasa]', (e, b) => { fasa = b.getAttribute('data-fasa'); KD.router.setQuery({ tab: 'semak', fasa }); draw(); });
     on(box, 'click', '[data-act="reload"]', load);
     on(box, 'click', '[data-act="add"]', (e) => { e.preventDefault(); form(null); });
@@ -2491,7 +2532,7 @@ window.KD = window.KD || {};
       const pct = d.total ? Math.round((100 * d.done) / d.total) : 0;
       box.innerHTML = html`<section class="panel um-dash">${icon('kaaba')}
         <div class="um-dash__body"><strong>Planner Umrah</strong>${d.total
-          ? html`<div class="small muted">${fmtNum(d.done)} daripada ${fmtNum(d.total)} persiapan siap (${pct}%)</div><div class="um-track"><span style="width:${pct}%"></span></div>`
+          ? html`${d.tarikhBerlepas ? html`<div class="um-trip__count">${icon('plane', 'i-sm')} ${fmtDate(d.tarikhBerlepas)} · ${countdown(d.tarikhBerlepas)}</div>` : ''}<div class="small muted">${fmtNum(d.done)} daripada ${fmtNum(d.total)} persiapan siap (${pct}%)</div><div class="um-track"><span style="width:${pct}%"></span></div>`
           : html`<div class="small muted">Senarai semak, perbelanjaan, jadual dan panduan Umrah.</div>`}</div>
         <a class="btn btn-outline btn-sm" href="#/umrah">${d.total ? 'Buka' : 'Mula'}</a></section>`.s;
     } catch (e) { box.innerHTML = ''; }

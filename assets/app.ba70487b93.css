@@ -679,6 +679,15 @@ p { margin: 0; }
 /* Planner Umrah (1.7.0) */
 .um-tabs { margin-bottom: var(--sp-5); max-width: 100%; }
 .um-stack { display: flex; flex-direction: column; gap: var(--sp-4); }
+.um-trip { display: flex; align-items: center; gap: var(--sp-4); flex-wrap: wrap; padding: var(--sp-4) var(--sp-5); }
+.um-trip > .i { width: 28px; height: 28px; color: var(--gold); flex: 0 0 auto; }
+.um-trip__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.um-trip__label { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+.um-trip__date { font-weight: 700; color: var(--maroon-900); font-size: var(--fs-lg); }
+.um-trip__count { font-size: var(--fs-sm); color: var(--maroon); font-weight: 600; font-variant-numeric: tabular-nums; }
+.um-trip__count .i { display: inline-block; vertical-align: -2px; width: 15px; height: 15px; }
+@media (max-width: 720px) { .um-trip { padding: var(--sp-3) var(--sp-4); gap: var(--sp-3); } }
+.um-trip.is-unset .um-trip__date { color: var(--muted); font-weight: 600; font-size: var(--fs-md); }
 .um-hero { display: flex; align-items: center; gap: var(--sp-5); flex-wrap: wrap; }
 .um-hero__pct { font-family: var(--font-display); font-size: var(--fs-3xl); color: var(--maroon); line-height: 1; font-variant-numeric: tabular-nums; }
 .um-hero__body { flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: var(--sp-2); }
