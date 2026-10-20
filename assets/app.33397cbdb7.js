@@ -232,7 +232,15 @@ window.KD = window.KD || {};
     constructor(message, code, meta) { super(message); this.code = code; this.meta = meta || {}; }
   }
 
-  function call(action, payload) {
+  /*
+   * Cuba semula jika sambungan gagal: Google kadangkala tidak menghantar jawapan (HTTP 404 pada URL echo, tamat masa)
+   * walaupun skrip telah berjalan. Setiap tindakan membawa meta.rid yang sama merentas cubaan, dan pelayan
+   * (Router.dispatch) memulangkan jawapan asal untuk rid yang telah diproses — jadi tulisan juga selamat diulang.
+   */
+  const RETRY_MS = [500, 1500, 3000];
+  const newRid = () => (KD.utils && KD.utils.requestId ? KD.utils.requestId() : 'r' + String(Date.now()) + Math.random().toString(36).slice(2, 12));
+
+  function once(action, payload, rid, attempt) {
     return new Promise((resolve, reject) => {
       if (!window.google || !google.script || !google.script.run) {
         reject(new ApiError('Aplikasi mesti dibuka melalui pautan Web App.', 'NO_RUNTIME'));
@@ -247,11 +255,22 @@ window.KD = window.KD || {};
           reject(err);
         })
         .withFailureHandler((e) => {
-          console.error('[api]', action, e);
-          reject(new ApiError('Sambungan ke pelayan gagal. Semak internet anda dan cuba semula.', 'NETWORK'));
+          console.error('[api]', action, 'cubaan ' + (attempt + 1), e);
+          const detail = String((e && e.message) || e || '').slice(0, 60);
+          reject(new ApiError('Sambungan ke pelayan gagal. Semak internet anda dan cuba semula.', 'NETWORK', { detail: detail }));
         })
-        .api({ action: action, payload: payload || {}, token: KD.auth ? KD.auth.token() : '', meta: { userAgent: navigator.userAgent } });
+        .api({ action: action, payload: payload || {}, token: KD.auth ? KD.auth.token() : '', meta: { userAgent: navigator.userAgent, rid: rid, attempt: attempt || 0 } });
     });
+  }
+
+  async function call(action, payload) {
+    const rid = newRid();
+    for (let i = 0; ; i++) {
+      try { return await once(action, payload, rid, i); } catch (err) {
+        if (err.code !== 'NETWORK' || i >= RETRY_MS.length) throw err;
+        await new Promise((r) => setTimeout(r, RETRY_MS[i]));
+      }
+    }
   }
 
   KD.api = {
