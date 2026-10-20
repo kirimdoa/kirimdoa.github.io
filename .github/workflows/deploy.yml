@@ -1,0 +1,90 @@
+# Deploy automatik Kirim Doa: setiap push ke main yang mengubah src/, tools/ atau web-tools/ →
+#   1. Ujian backend (2 susunan muat) + semakan frontend + imbasan rahsia
+#   2. Apps Script: clasp push + kemas kini deployment SEDIA ADA (URL /exec kekal sama, versi baharu dicipta)
+#   3. Laman web (GitHub Pages): bina assets/ + index.html + sw.js daripada src/ dan commit ke main
+# Laman web hanya dikemas kini SELEPAS backend berjaya, jadi tiada lagi ralat "Tindakan tidak dikenali".
+# Migrasi pangkalan data (sheet/lajur baharu) berjalan sendiri pada permintaan pertama.
+#
+# Persediaan SEKALI: Secret CLASPRC_JSON (lihat DEPLOY.md).
+name: Deploy Kirim Doa
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'tools/**'
+      - 'web-tools/**'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-kirimdoa
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  # Bukan rahsia: ID projek Apps Script & ID deployment Web App (sama seperti dalam config.js)
+  SCRIPT_ID: 1BL9HpmFlYjRvKtxvJ23ew60qcJbN0SKNwK_nkXzgweUe3REKmzmRpiNN
+  DEPLOYMENT_ID: AKfycbxVQdBEj62srAflj1xiIUgtA3blxlo4U-OSlQRhtNKqqN_qr3_HXggHX5gKMgAB_i8n
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Ujian backend (abjad + terbalik)
+        run: node tools/run-tests.js && node tools/run-tests.js --reverse
+
+      - name: Semakan frontend & imbasan rahsia
+        run: node tools/check-frontend.js && node tools/scan-secrets.js
+
+      - name: Bina folder Apps Script
+        run: node tools/build-gas.js --out build/gas
+
+      - name: Kelayakan clasp
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          if [ -z "$CLASPRC_JSON" ]; then
+            echo "::error::Secret CLASPRC_JSON belum ditetapkan. Lihat DEPLOY.md langkah 2-3."
+            exit 1
+          fi
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          printf '{"scriptId":"%s","rootDir":"build/gas"}\n' "$SCRIPT_ID" > .clasp.json
+          npm install -g --no-audit --no-fund @google/clasp@3
+
+      - name: clasp push (kod ke Apps Script)
+        run: clasp push --force
+
+      - name: Kemas kini deployment (URL /exec kekal sama)
+        run: clasp update-deployment "$DEPLOYMENT_ID" --description "CI ${GITHUB_SHA::7} $(date -u +%F)"
+
+      - name: Buang kelayakan
+        if: always()
+        run: rm -f "$HOME/.clasprc.json" .clasp.json
+
+      - name: Bina laman web
+        run: python3 web-tools/build_web.py
+
+      - name: Terbit laman web (commit ke main)
+        run: |
+          if [ -z "$(git status --porcelain -- index.html sw.js assets)" ]; then
+            echo "Laman web tiada perubahan."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A -- index.html sw.js assets
+          VERSION=$(grep -o "VERSION: '[^']*'" src/config/Config.gs | cut -d"'" -f2)
+          git commit -m "Web $VERSION (CI ${GITHUB_SHA::7})"
+          git push origin HEAD:main

@@ -1,0 +1,151 @@
+<script>
+/**
+ * KD.ui — komponen UI boleh guna semula: ikon, toast, modal, sahkan, skeleton, kosong, pager, ralat borang.
+ */
+(function (KD) {
+  'use strict';
+  const { html, raw, qs, qsa, esc, fmtNum } = KD.utils;
+
+  const icon = (name, cls) => raw('<svg class="i ' + (cls || '') + '" aria-hidden="true"><use href="#i-' + esc(name) + '"/></svg>');
+  const star = (cls) => raw('<svg class="brand-star ' + (cls || '') + '" viewBox="0 0 64 64" aria-hidden="true"><use href="#i-brand"/></svg>');
+
+  /** Siluet langit masjid (asli, generik) untuk bahagian bawah hero. */
+  const skyline = raw('<svg viewBox="0 0 1440 220" preserveAspectRatio="xMidYMax slice" aria-hidden="true" fill="currentColor">' +
+    '<path d="M0 220V178h70v-34h8v-46l6-14 6 14v46h8v34h60c0-34 22-58 52-66 4-10 10-16 10-16s6 6 10 16c30 8 52 32 52 66h40v-64h6v-80l7-16 7 16v80h6v64h56' +
+    'c0-26 18-44 40-48 2-8 7-12 7-12s5 4 7 12c22 4 40 22 40 48h120c0-58 40-104 96-114 6-18 20-30 20-30s14 12 20 30c56 10 96 56 96 114h44v-90h8v-62l8-18 8 18v62h8v90' +
+    'h112c0-30 20-52 46-58 3-9 9-14 9-14s6 5 9 14c26 6 46 28 46 58h70v-40h8v-52l6-14 6 14v52h8v40h48c0-22 14-36 32-40 2-7 6-10 6-10s4 3 6 10c18 4 32 18 32 40h50v42z"/></svg>');
+
+  const CATEGORY_ICON = { heart: 'heart', home: 'home', coins: 'coins', plane: 'plane', mosque: 'mosque', book: 'book', briefcase: 'briefcase', rings: 'rings', kaaba: 'kaaba', users: 'users', parents: 'parents', star: 'star', moon: 'moon', hands: 'hands' };
+  const catIcon = (name, cls) => icon(CATEGORY_ICON[name] || 'star', cls);
+
+  // ---------------------------------------------------------------- Toast
+  function toast(message, type) {
+    const root = qs('#toasts');
+    const el = document.createElement('div');
+    el.className = 'toast' + (type === 'error' ? ' toast-error' : '');
+    el.setAttribute('role', type === 'error' ? 'alert' : 'status');
+    el.innerHTML = html`${icon(type === 'error' ? 'alert' : 'check')}<div>${message}</div>`.s;
+    root.appendChild(el);
+    setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(() => el.remove(), 300); }, type === 'error' ? 6000 : 3800);
+  }
+  /** Papar ralat API dengan errorId (jika ada) untuk rujukan sokongan. */
+  function toastError(err) {
+    const id = err && err.meta && err.meta.errorId;
+    toast((err && err.message ? err.message : 'Maaf, berlaku masalah.') + (id ? ' (Rujukan: ' + id + ')' : ''), 'error');
+  }
+
+  // ---------------------------------------------------------------- Modal
+  let lastFocus = null;
+  /**
+   * @param {{title:string, body:Raw, foot?:Raw, wide?:boolean, onClose?:Function}} opts
+   * @return {{el:HTMLElement, close:Function}}
+   */
+  function modal(opts) {
+    lastFocus = document.activeElement;
+    const root = qs('#modal-root');
+    const wrap = document.createElement('div');
+    wrap.className = 'modal-backdrop';
+    const titleId = 'm' + Math.random().toString(36).slice(2);
+    wrap.innerHTML = html`<div class="modal ${opts.wide ? 'modal-wide' : ''}" role="dialog" aria-modal="true" aria-labelledby="${titleId}">
+      <div class="modal__head"><h3 id="${titleId}">${opts.title}</h3><button class="icon-btn" data-close aria-label="Tutup">${icon('x')}</button></div>
+      <div class="modal__body">${opts.body}</div>
+      ${opts.foot ? html`<div class="modal__foot">${opts.foot}</div>` : ''}
+    </div>`.s;
+    root.appendChild(wrap);
+    document.body.style.overflow = 'hidden';
+    const close = () => {
+      wrap.remove();
+      if (!qs('#modal-root').children.length) document.body.style.overflow = '';
+      document.removeEventListener('keydown', onKey);
+      if (opts.onClose) opts.onClose();
+      if (lastFocus && lastFocus.focus) lastFocus.focus();
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') close();
+      if (e.key === 'Tab') { // perangkap fokus
+        const f = qsa('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])', wrap).filter((x) => !x.disabled && x.offsetParent !== null);
+        if (!f.length) return;
+        if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); }
+        else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    wrap.addEventListener('mousedown', (e) => { if (e.target === wrap) close(); });
+    qsa('[data-close]', wrap).forEach((b) => b.addEventListener('click', close));
+    const first = qs('input, select, textarea', wrap) || qs('[data-close]', wrap);
+    if (first) setTimeout(() => first.focus(), 30);
+    return { el: wrap, close };
+  }
+
+  /** Dialog pengesahan. @return {Promise<boolean|string>} (string = sebab, jika withReason) */
+  function confirm(opts) {
+    return new Promise((resolve) => {
+      let done = false;
+      const m = modal({
+        title: opts.title,
+        body: html`<p>${opts.message}</p>${opts.withReason ? html`<div class="field mt-4"><label class="label" for="cf-reason">Sebab (pilihan)</label><input class="input" id="cf-reason" maxlength="200"></div>` : ''}`,
+        foot: html`<button class="btn btn-outline" data-close>Batal</button><button class="btn ${opts.danger ? 'btn-danger' : 'btn-primary'}" data-ok>${opts.confirmText || 'Teruskan'}</button>`,
+        onClose: () => { if (!done) resolve(false); }
+      });
+      qs('[data-ok]', m.el).addEventListener('click', () => {
+        done = true;
+        const reason = opts.withReason ? qs('#cf-reason', m.el).value.trim() : true;
+        m.close();
+        resolve(opts.withReason ? (reason || ' ') : true);
+      });
+    });
+  }
+
+  // ---------------------------------------------------------------- Keadaan
+  const skeletonList = (n) => html`<div class="panel">${Array.from({ length: n || 4 }, () => html`<div class="row" style="margin:14px 0"><div class="skel" style="width:42px;height:42px;border-radius:50%"></div><div class="grow"><div class="skel skel-line" style="width:40%"></div><div class="skel skel-line" style="width:85%"></div></div></div>`)}</div>`;
+  const skeletonStats = (n) => html`<div class="grid grid-4">${Array.from({ length: n || 4 }, () => html`<div class="skel skel-block"></div>`)}</div>`;
+  const empty = (title, message, action) => html`<div class="empty">${star()}<h3>${title}</h3><p>${message}</p>${action || ''}</div>`;
+  const errorState = (err, retryAct) => html`<div class="empty">${icon('alert', 'i-lg')}<h3>Tidak dapat memuatkan data</h3><p>${err && err.message ? err.message : 'Sila cuba semula.'}</p>${retryAct ? html`<button class="btn btn-outline" data-act="${retryAct}">${icon('refresh')}Cuba semula</button>` : ''}</div>`;
+
+  /** Navigasi halaman. */
+  function pager(meta) {
+    if (!meta || meta.totalPages <= 1) return meta && meta.total ? html`<div class="pager"><span>${fmtNum(meta.total)} rekod</span></div>` : '';
+    return html`<div class="pager"><span>Halaman ${meta.page} daripada ${meta.totalPages}, ${fmtNum(meta.total)} rekod</span>
+      <div class="row"><button class="btn btn-outline btn-sm" data-page="${meta.page - 1}" ${meta.page <= 1 ? raw('disabled') : ''}>${icon('chev-left', 'i-sm')}Sebelum</button>
+      <button class="btn btn-outline btn-sm" data-page="${meta.page + 1}" ${meta.page >= meta.totalPages ? raw('disabled') : ''}>Seterusnya${icon('chev-right', 'i-sm')}</button></div></div>`;
+  }
+
+  /** Butang sibuk semasa operasi async. */
+  async function busy(btn, fn) {
+    if (!btn) return fn();
+    btn.classList.add('is-loading'); btn.disabled = true;
+    try { return await fn(); } finally { btn.classList.remove('is-loading'); btn.disabled = false; }
+  }
+
+  /** Papar ralat medan daripada respons VALIDATION_ERROR. */
+  function fieldErrors(form, err) {
+    qsa('.field-error', form).forEach((e) => e.remove());
+    qsa('.field.has-error', form).forEach((f) => f.classList.remove('has-error'));
+    const fields = err && err.meta && err.meta.fields;
+    if (!fields) return false;
+    let first = null;
+    Object.keys(fields).forEach((name) => {
+      const input = form.querySelector('[name="' + name + '"]');
+      const field = input && input.closest('.field');
+      if (!field) return;
+      field.classList.add('has-error');
+      const p = document.createElement('div');
+      p.className = 'field-error';
+      p.textContent = fields[name];
+      field.appendChild(p);
+      if (!first) first = input;
+    });
+    if (first) first.focus();
+    return !!first;
+  }
+
+  const statusBadge = (s) => {
+    const map = { ACTIVE: ['badge-success', 'Aktif'], INACTIVE: ['badge-muted', 'Tidak aktif'], BLOCKED: ['badge-danger', 'Disekat'], ARCHIVED: ['badge-warn', 'Diarkib'], DELETED: ['badge-danger', 'Dipadam'], CLOSED: ['badge-muted', 'Ditutup'], NEW: ['badge-gold', 'Baharu'], REVIEWED: ['badge-success', 'Disemak'] };
+    const m = map[s] || ['badge-muted', s];
+    return html`<span class="badge ${m[0]}">${m[1]}</span>`;
+  };
+  const roleBadge = (r) => html`<span class="badge ${r === 'SUPER_ADMIN' ? 'badge-maroon' : r === 'ADMIN' ? 'badge' : 'badge-muted'}">${r === 'SUPER_ADMIN' ? 'Super Admin' : r === 'ADMIN' ? 'Admin' : 'Pengguna'}</span>`;
+
+  KD.ui = { icon, star, skyline, catIcon, toast, toastError, modal, confirm, skeletonList, skeletonStats, empty, errorState, pager, busy, fieldErrors, statusBadge, roleBadge };
+})(window.KD);
+</script>

@@ -1,0 +1,143 @@
+<style>
+/* ==========================================================================
+   Paparan khusus: landing, auth, hantar doa, mod baca, Kumpul Doa awam
+   Elemen tandatangan: GERBANG MIHRAB (lengkung atas + garis emas dalaman)
+   ========================================================================== */
+.arch {
+  position: relative;
+  border-radius: 999px 999px var(--r-lg) var(--r-lg) / 260px 260px var(--r-lg) var(--r-lg);
+}
+.arch::before { /* garis emas dalaman mengikut bentuk gerbang */
+  content: ""; position: absolute; inset: 10px; pointer-events: none;
+  border: 1px solid rgba(201, 163, 58, .55);
+  border-radius: 999px 999px 12px 12px / 250px 250px 12px 12px;
+}
+
+/* ---------------------------------------------------------------- Landing */
+.hero { position: relative; overflow: hidden; background: var(--grad-brand); color: #F6EDF1; padding: var(--sp-6) var(--sp-6) 0; }
+.hero::before { /* corak bintang 8 sangat halus */
+  content: ""; position: absolute; inset: 0; opacity: .5;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='.06'%3E%3Crect x='18' y='18' width='36' height='36'/%3E%3Crect x='18' y='18' width='36' height='36' transform='rotate(45 36 36)'/%3E%3C/g%3E%3C/svg%3E");
+}
+.hero .public-top { position: relative; z-index: 2; padding: 0 var(--sp-2) var(--sp-4); }
+.hero .public-top .brand { color: #fff; }
+.hero .public-top .brand .brand-star { color: var(--gold); }
+.hero__arch {
+  position: relative; z-index: 2;
+  width: min(720px, 100%); margin: var(--sp-4) auto 0;
+  padding: 92px var(--sp-10) 170px;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(251, 247, 239, .1), rgba(251, 247, 239, .04));
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-bottom: 0;
+}
+.hero__star { width: 54px; height: 54px; color: var(--gold); margin: 0 auto var(--sp-4); }
+.hero__bismillah { font-family: var(--font-arabic); font-size: 1.9rem; color: var(--gold-200); line-height: 1.6; }
+.hero__title { font-family: var(--font-display); font-size: clamp(3rem, 8vw, 5.5rem); color: #fff; line-height: 1; margin-top: var(--sp-3); letter-spacing: .01em; }
+.hero__tag { font-family: var(--font-display); font-size: var(--fs-xl); color: #F1DCE4; margin-top: var(--sp-3); }
+.hero__msg { max-width: 46ch; margin: var(--sp-5) auto 0; color: rgba(246, 237, 241, .86); }
+.hero__cta { display: flex; gap: var(--sp-3); justify-content: center; flex-wrap: wrap; margin-top: var(--sp-6); }
+.hero__count { margin-top: var(--sp-6); font-size: var(--fs-sm); color: rgba(246, 237, 241, .8); }
+.hero__count strong { font-family: var(--font-ui); font-size: var(--fs-lg); color: #fff; font-weight: 700; font-variant-numeric: tabular-nums; }
+.hero__skyline { position: absolute; z-index: 1; left: 0; right: 0; bottom: 0; color: rgba(36, 10, 26, .55); pointer-events: none; }
+.hero__skyline svg { width: 100%; height: auto; }
+
+.feature-strip { position: relative; z-index: 3; display: flex; justify-content: center; gap: var(--sp-3); flex-wrap: wrap; margin: -28px auto 0; padding: 0 var(--sp-4); }
+.feature-chip { display: inline-flex; align-items: center; gap: var(--sp-2); padding: 12px 20px; border-radius: var(--r-pill); background: var(--white); border: 1px solid var(--line); box-shadow: var(--shadow-lift); color: var(--maroon-900); font-weight: 600; font-size: var(--fs-sm); text-decoration: none; }
+.feature-chip .i { color: var(--purple); }
+.feature-chip:hover { border-color: var(--gold); color: var(--maroon); }
+
+.section { width: min(1080px, 100%); margin: 0 auto; padding: var(--sp-12) var(--sp-6); }
+.section-title { text-align: center; margin-bottom: var(--sp-8); }
+.section-title p { color: var(--muted); max-width: 56ch; margin: var(--sp-2) auto 0; }
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-6); counter-reset: step; }
+.step { position: relative; padding: var(--sp-6); padding-top: var(--sp-10); background: var(--white); border: 1px solid var(--line); border-radius: var(--r-md); }
+.step::before { counter-increment: step; content: counter(step); position: absolute; top: -20px; left: var(--sp-6); width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; background: var(--cream); border: 1px solid var(--gold); font-family: var(--font-display); font-size: var(--fs-lg); color: var(--maroon); }
+.step h3 { font-size: var(--fs-lg); margin-bottom: var(--sp-2); }
+.step p { color: var(--muted); font-size: var(--fs-sm); }
+.about { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-10); align-items: center; }
+.about__quote { font-family: var(--font-display); font-size: var(--fs-2xl); color: var(--maroon-900); line-height: 1.35; padding-left: var(--sp-6); border-left: 2px solid var(--gold); }
+.about__quote small { display: block; font-family: var(--font-ui); font-size: var(--fs-sm); color: var(--muted); margin-top: var(--sp-3); }
+.about p + p { margin-top: var(--sp-3); }
+.about p { color: #4A3D47; }
+
+/* ---------------------------------------------------------------- Auth */
+.auth { flex: 1; display: grid; place-items: center; padding: var(--sp-6); }
+.auth-card { width: min(440px, 100%); background: var(--white); border: 1px solid var(--line); border-radius: var(--r-lg); padding: var(--sp-8); }
+.auth-card__head { text-align: center; margin-bottom: var(--sp-6); }
+.auth-card__head .brand-star { width: 46px; height: 46px; color: var(--maroon); margin: 0 auto var(--sp-3); }
+.auth-card__head p { color: var(--muted); margin-top: var(--sp-1); font-size: var(--fs-sm); }
+.auth-links { display: flex; justify-content: space-between; gap: var(--sp-3); margin-top: var(--sp-5); font-size: var(--fs-sm); flex-wrap: wrap; }
+
+/* ---------------------------------------------------------------- Dashboard */
+.welcome { position: relative; overflow: hidden; padding: var(--sp-6) var(--sp-8); border-radius: var(--r-lg); background: var(--grad-brand); color: #F6EDF1; display: flex; align-items: center; justify-content: space-between; gap: var(--sp-6); flex-wrap: wrap; }
+.welcome > :not(.brand-star) { position: relative; z-index: 1; }
+.welcome h2 { color: #fff; }
+.welcome p { color: rgba(246, 237, 241, .85); margin-top: var(--sp-1); }
+.welcome__salam { font-family: var(--font-arabic); color: var(--gold-200); font-size: var(--fs-lg); }
+.welcome .brand-star { position: absolute; z-index: 0; right: 180px; top: -60px; width: 220px; height: 220px; color: rgba(201, 163, 58, .16); pointer-events: none; }
+.quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-3); }
+.quick a { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-4); border-radius: var(--r-md); background: var(--white); border: 1px solid var(--line); text-decoration: none; color: var(--maroon-900); font-weight: 600; font-size: var(--fs-sm); }
+.quick a:hover { border-color: var(--maroon); }
+.quick a .i { width: 26px; height: 26px; color: var(--purple); }
+.quick a:first-child { background: var(--maroon); border-color: var(--maroon); color: #fff; }
+.quick a:first-child .i { color: var(--gold-200); }
+
+/* ---------------------------------------------------------------- Hantar doa */
+.compose { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(260px, 1fr); gap: var(--sp-6); align-items: start; }
+.compose__aside .panel + .panel { margin-top: var(--sp-5); }
+.success-card { text-align: center; padding: var(--sp-10) var(--sp-6); }
+.success-card .brand-star { width: 64px; height: 64px; color: var(--gold); margin: 0 auto var(--sp-4); }
+.success-card h2 { margin-bottom: var(--sp-2); }
+
+/* ---------------------------------------------------------------- Mod baca */
+.reader { width: min(720px, 100%); margin: 0 auto; }
+.reader__progress { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); margin-bottom: var(--sp-4); font-size: var(--fs-sm); color: var(--muted); }
+.reader__bar { height: 3px; border-radius: 2px; background: var(--lilac); overflow: hidden; margin-bottom: var(--sp-6); }
+.reader__bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--maroon)); transition: width .3s ease; }
+.reader__page { background: var(--white); border: 1px solid var(--line); padding: 104px var(--sp-12) var(--sp-10); text-align: center; min-height: 460px; display: flex; flex-direction: column; box-shadow: var(--shadow-lift); }
+.reader__page .brand-star { width: 34px; height: 34px; color: var(--gold); margin: 0 auto var(--sp-4); }
+.reader__cat { color: var(--purple); font-size: var(--fs-sm); display: inline-flex; gap: 6px; align-items: center; justify-content: center; }
+.reader__title { font-size: var(--fs-2xl); margin-top: var(--sp-2); }
+.reader__text { font-size: 1.2rem; line-height: 1.9; color: #34262F; margin: var(--sp-6) auto 0; max-width: 52ch; white-space: pre-wrap; text-align: center; }
+.reader__from { margin-top: auto; padding-top: var(--sp-8); font-size: var(--fs-sm); color: var(--muted); }
+.reader__from strong { color: var(--maroon-900); font-weight: 600; }
+.reader__nav { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); margin-top: var(--sp-5); }
+.reader__tools { display: flex; gap: var(--sp-2); }
+.reader__prayed { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--sp-2) var(--sp-3); margin-top: var(--sp-4); min-height: 44px; }
+
+/* ---------------------------------------------------------------- Kumpul Doa */
+.link-card { padding: var(--sp-5); background: var(--white); border: 1px solid var(--line); border-radius: var(--r-md); }
+.link-card + .link-card { margin-top: var(--sp-4); }
+.link-card__url { display: flex; gap: var(--sp-2); margin-top: var(--sp-3); }
+.link-card__url .input { font-size: var(--fs-sm); background: var(--cream); }
+.collect { flex: 1; padding: var(--sp-8) var(--sp-4) var(--sp-12); }
+.collect__head { width: min(640px, 100%); margin: 0 auto; text-align: center; padding: 84px var(--sp-8) var(--sp-8); background: var(--grad-brand); color: #F6EDF1; }
+.collect__head .brand-star { width: 40px; height: 40px; color: var(--gold); margin: 0 auto var(--sp-3); }
+.collect__head h1 { color: #fff; font-size: var(--fs-2xl); }
+.collect__head p { margin-top: var(--sp-2); color: rgba(246, 237, 241, .85); }
+.collect__for { font-family: var(--font-display); font-size: var(--fs-lg); color: var(--gold-200); margin-top: var(--sp-1); }
+.collect__form { width: min(640px, 100%); margin: 0 auto; background: var(--white); border: 1px solid var(--line); border-top: 0; border-radius: 0 0 var(--r-lg) var(--r-lg); padding: var(--sp-8); }
+
+/* Butiran doa (modal) */
+.doa-detail__text { font-size: var(--fs-lg); line-height: 1.85; white-space: pre-wrap; color: #34262F; }
+.doa-detail__meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3) var(--sp-6); margin-top: var(--sp-6); padding-top: var(--sp-5); border-top: 1px solid var(--line); font-size: var(--fs-sm); }
+.doa-detail__meta dt { color: var(--muted); }
+.doa-detail__meta dd { margin: 0; font-weight: 600; color: var(--maroon-900); }
+.att-preview { margin-top: var(--sp-3); border-radius: var(--r-md); overflow: hidden; border: 1px solid var(--line); }
+.att-preview img { width: 100%; max-height: 360px; object-fit: contain; background: var(--cream-200); }
+.att-preview audio { width: 100%; }
+
+/* Tetapan admin */
+.setting-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(200px, 320px); gap: var(--sp-4); padding: var(--sp-4) 0; border-top: 1px solid var(--line); align-items: center; }
+.setting-row:first-child { border-top: 0; }
+.setting-row__key { font-weight: 600; color: var(--maroon-900); font-size: var(--fs-sm); }
+.toggle { position: relative; width: 46px; height: 26px; flex: none; }
+.toggle input { position: absolute; opacity: 0; inset: 0; cursor: pointer; z-index: 1; }
+.toggle span { position: absolute; inset: 0; border-radius: 13px; background: var(--line-strong); transition: background .15s; }
+.toggle span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform .15s; box-shadow: 0 1px 3px rgba(0, 0, 0, .2); }
+.toggle input:checked + span { background: var(--maroon); }
+.toggle input:checked + span::after { transform: translateX(20px); }
+.toggle input:focus-visible + span { box-shadow: var(--focus); }
+.toggle input:disabled + span { opacity: .5; }
+</style>

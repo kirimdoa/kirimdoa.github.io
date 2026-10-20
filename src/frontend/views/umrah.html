@@ -1,0 +1,385 @@
+<style>
+/* Planner Umrah (1.7.0) */
+.um-tabs { margin-bottom: var(--sp-5); max-width: 100%; }
+.um-stack { display: flex; flex-direction: column; gap: var(--sp-4); }
+.um-trip { display: flex; align-items: center; gap: var(--sp-4); flex-wrap: wrap; padding: var(--sp-4) var(--sp-5); }
+.um-trip > .i { width: 28px; height: 28px; color: var(--gold); flex: 0 0 auto; }
+.um-trip__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.um-trip__label { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+.um-trip__date { font-weight: 700; color: var(--maroon-900); font-size: var(--fs-lg); }
+.um-trip__count { font-size: var(--fs-sm); color: var(--maroon); font-weight: 600; font-variant-numeric: tabular-nums; }
+.um-trip__count .i { display: inline-block; vertical-align: -2px; width: 15px; height: 15px; }
+@media (max-width: 720px) { .um-trip { padding: var(--sp-3) var(--sp-4); gap: var(--sp-3); } }
+.um-trip.is-unset .um-trip__date { color: var(--muted); font-weight: 600; font-size: var(--fs-md); }
+.um-hero { display: flex; align-items: center; gap: var(--sp-5); flex-wrap: wrap; }
+.um-hero__pct { font-family: var(--font-display); font-size: var(--fs-3xl); color: var(--maroon); line-height: 1; font-variant-numeric: tabular-nums; }
+.um-hero__body { flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: var(--sp-2); }
+.um-track { height: 8px; background: var(--maroon-50); border-radius: var(--r-pill); overflow: hidden; }
+.um-track span { display: block; height: 100%; background: linear-gradient(90deg, var(--maroon), var(--gold)); border-radius: var(--r-pill); transition: width .25s; }
+.um-group { padding: 0; overflow: hidden; }
+.um-group__head { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-3); padding: var(--sp-4) var(--sp-5) var(--sp-3); border-bottom: 1px solid var(--line); }
+.um-group__head h3 { margin: 0; font-size: var(--fs-md); font-family: var(--font-ui); font-weight: 700; color: var(--maroon-900); }
+.um-count { font-size: var(--fs-sm); color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.um-row { display: flex; align-items: flex-start; gap: var(--sp-3); padding: var(--sp-3) var(--sp-5); border-top: 1px solid var(--line); }
+.um-row:first-child { border-top: 0; }
+.um-row input[type=checkbox] { flex: 0 0 22px; width: 22px; height: 22px; margin-top: 2px; accent-color: var(--maroon); cursor: pointer; }
+.um-row__body { flex: 1; min-width: 0; cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+.um-row__title { font-weight: 600; overflow-wrap: anywhere; }
+.um-row__note { font-size: var(--fs-sm); color: var(--muted); overflow-wrap: anywhere; }
+.um-row__date { font-size: var(--fs-xs); color: var(--warn); font-weight: 600; }
+.um-row__date.is-today { color: var(--maroon); }
+.um-row.is-done .um-row__title { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--gold); }
+.um-row .icon-btn { flex: 0 0 auto; }
+.um-sum { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-4); }
+.um-sum .stat { min-width: 0; }
+.um-sum .stat__value { font-variant-numeric: tabular-nums; }
+.um-day { padding: 0; overflow: hidden; }
+.um-day__head { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-3); padding: var(--sp-3) var(--sp-5); background: var(--cream); border-bottom: 1px solid var(--line); }
+.um-day__head h3 { margin: 0; font-size: var(--fs-md); font-family: var(--font-ui); font-weight: 700; }
+.um-day.is-today { border-color: var(--maroon); box-shadow: 0 0 0 1px var(--maroon); }
+.um-act { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: var(--sp-3); padding: var(--sp-3) var(--sp-5); border-top: 1px solid var(--line); align-items: start; }
+.um-act:first-child { border-top: 0; }
+.um-act__time { font-weight: 700; color: var(--maroon); font-variant-numeric: tabular-nums; }
+.um-act__title { font-weight: 600; overflow-wrap: anywhere; }
+.um-act__meta { font-size: var(--fs-sm); color: var(--muted); overflow-wrap: anywhere; }
+.um-exp { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: var(--sp-3); align-items: center; padding: var(--sp-3) var(--sp-5); border-top: 1px solid var(--line); }
+.um-exp:first-child { border-top: 0; }
+.um-exp__amt { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.um-exp__rm { display: block; font-size: var(--fs-xs); color: var(--muted); font-weight: 500; }
+.um-ar { font-family: var(--font-arabic); font-size: 1.55rem; line-height: 2; direction: rtl; text-align: right; margin: 0; color: var(--maroon-900); }
+.um-rumi { font-style: italic; color: var(--muted); margin: 0; }
+.um-steps { display: flex; flex-direction: column; gap: var(--sp-4); margin: 0; padding: 0; list-style: none; counter-reset: s; }
+.um-steps li { counter-increment: s; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: var(--sp-3); align-items: start; }
+.um-steps li::before { content: counter(s); width: 34px; height: 34px; border-radius: 50%; background: var(--maroon); color: var(--gold-200); display: grid; place-items: center; font-weight: 700; font-family: var(--font-display); }
+.um-steps b { display: block; color: var(--maroon-900); }
+.um-list { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: var(--sp-1); }
+.um-start { display: flex; flex-direction: column; gap: var(--sp-4); max-width: 560px; }
+.um-start .row { align-items: flex-end; }
+.um-titipan { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-3); }
+.um-titipan a { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-4); border-radius: var(--r-md); border: 1px solid var(--line); background: var(--white); text-decoration: none; color: var(--maroon-900); font-weight: 600; }
+.um-titipan a:hover { border-color: var(--maroon); }
+.um-titipan a .i { width: 26px; height: 26px; color: var(--purple); }
+.um-titipan small { font-weight: 400; color: var(--muted); }
+.um-dash { display: flex; align-items: center; gap: var(--sp-4); flex-wrap: wrap; }
+.um-dash > .i { width: 36px; height: 36px; color: var(--maroon); }
+.um-dash__body { flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: var(--sp-2); }
+@media (max-width: 720px) {
+  .um-sum { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3); }
+  .um-sum > :first-child { grid-column: 1 / -1; }
+  .um-sum .stat:not(:first-child) .stat__value { font-size: var(--fs-lg); }
+  .um-titipan { grid-template-columns: 1fr; }
+  .um-row, .um-act, .um-exp, .um-group__head, .um-day__head { padding-left: var(--sp-4); padding-right: var(--sp-4); }
+  .um-tabs { display: flex; flex-wrap: nowrap; overflow-x: auto; }
+  .um-tabs button { flex: 0 0 auto; }
+}
+</style>
+<script>
+/**
+ * Planner Umrah: Senarai Semak, Perbelanjaan, Jadual & Ziarah, Titipan Doa (guna Kumpul Doa), Panduan.
+ * Satu laluan #/umrah?tab=… supaya semua dalam satu tempat.
+ * NOTA Apps Script: jangan tulis dua garis condong dalam skrip ini.
+ */
+(function (KD) {
+  'use strict';
+  const { html, raw, qs, on, formData, fmtNum, fmtDate, todayKey } = KD.utils;
+  const { icon, toast, toastError, modal, confirm, skeletonList, empty, errorState, busy, fieldErrors } = KD.ui;
+  const call = KD.api.call;
+
+  const TABS = [['semak', 'list', 'Senarai Semak'], ['belanja', 'coins', 'Perbelanjaan'], ['jadual', 'calendar', 'Jadual'], ['titipan', 'hands', 'Titipan Doa'], ['panduan', 'book', 'Panduan']];
+  const FASA = [['SEBELUM', 'Sebelum'], ['SEMASA', 'Semasa'], ['SELEPAS', 'Selepas']];
+  const KUMPULAN = [['DOKUMEN', 'Dokumen & urusan rasmi'], ['KEWANGAN', 'Kewangan'], ['ROHANI', 'Ilmu & persiapan rohani'], ['KESIHATAN', 'Kesihatan'],
+    ['BARANG', 'Barang bawaan'], ['BERLEPAS', 'Hari berlepas'], ['MIQAT', 'Penerbangan & miqat'], ['IBADAH', 'Ibadah Umrah'], ['MAKKAH', 'Di Makkah'],
+    ['MADINAH', 'Di Madinah'], ['JAGADIRI', 'Jaga diri'], ['PULANG', 'Sebelum pulang'], ['TIBA', 'Tiba di tanah air'], ['AMALAN', 'Kekalkan amalan'], ['LAIN', 'Lain-lain']];
+  const KATEGORI = [['MAKAN', 'Makan & minum'], ['PENGANGKUTAN', 'Pengangkutan'], ['OLEOLE', 'Ole-ole'], ['DAM', 'Dam / fidyah'], ['SEDEKAH', 'Sedekah & infaq'], ['PAKEJ', 'Pakej & persiapan'], ['LAIN', 'Lain-lain']];
+  const LOKASI = [['MAKKAH', 'Makkah'], ['MADINAH', 'Madinah'], ['MALAYSIA', 'Malaysia'], ['PERJALANAN', 'Dalam perjalanan'], ['LAIN', 'Lain-lain']];
+  const JENIS = [['IBADAH', 'Ibadah'], ['ZIARAH', 'Ziarah'], ['PERJALANAN', 'Perjalanan'], ['HOTEL', 'Hotel'], ['MAKAN', 'Makan'], ['LAIN', 'Lain-lain']];
+  /** Hari dari hari ini ke tarikh (YYYY-MM-DD). */
+  const daysTo = (key) => Math.round((new Date(key + 'T00:00:00Z') - new Date(todayKey() + 'T00:00:00Z')) / 86400000);
+  const countdown = (key) => { const n = daysTo(key); return n > 1 ? n + ' hari lagi' : n === 1 ? 'Esok' : n === 0 ? 'Hari ini, selamat berangkat' : 'Hari ke-' + (1 - n) + ' perjalanan'; };
+  const label = (list, v) => (list.filter((x) => x[0] === v)[0] || [v, v || ''])[1];
+  const money = (n, cur) => cur + ' ' + Number(n || 0).toLocaleString('ms-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const options = (list, v) => list.map((o) => html`<option value="${o[0]}" ${o[0] === v ? raw('selected') : ''}>${o[1]}</option>`);
+  const field = (id, lbl, input, req, hint) => html`<div class="field"><label class="label" for="${id}">${lbl}${req ? html` <span class="req">*</span>` : ''}</label>${input}${hint ? html`<span class="hint">${hint}</span>` : ''}</div>`;
+
+  /** Borang dalam modal: simpan → call(action, data) → reload. */
+  function openForm(opts) {
+    const m = modal({ title: opts.title, body: html`<form novalidate>${opts.body}</form>`,
+      foot: html`${opts.id ? html`<button class="btn btn-ghost" data-act="del" style="margin-right:auto">${icon('trash', 'i-sm')}Padam</button>` : ''}<button class="btn btn-outline" data-close>Batal</button><button class="btn btn-primary" data-act="save">Simpan</button>` });
+    const form = qs('form', m.el);
+    form.addEventListener('submit', (e) => e.preventDefault());
+    on(m.el, 'click', '[data-act="save"]', (e, b) => busy(b, async () => {
+      const data = formData(form);
+      if (opts.id) data.id = opts.id;
+      try { await call(opts.action, data); m.close(); toast('Disimpan.'); opts.done(); } catch (err) { if (!fieldErrors(form, err)) toastError(err); }
+    }));
+    on(m.el, 'click', '[data-act="del"]', async () => {
+      m.close();
+      if (!(await confirm({ title: 'Padam rekod?', message: 'Rekod ini akan dipadam terus.', confirmText: 'Padam', danger: true }))) return;
+      try { await call(opts.delAction, { id: opts.id }); toast('Dipadam.'); opts.done(); } catch (err) { toastError(err); }
+    });
+  }
+
+  /* ---- Senarai semak ---- */
+  async function semak(box, query) {
+    let data = null;
+    let fasa = query.fasa || '';
+    const draw = () => {
+      const items = data.items;
+      if (!items.length) {
+        box.innerHTML = html`<section class="panel"><div class="um-start">
+          <div><h3>Mulakan senarai semak Umrah</h3><p class="muted mt-2">Lebih 50 perkara persiapan, dari dokumen hingga amalan selepas pulang. Masukkan tarikh berlepas untuk tarikh sasaran automatik.</p></div>
+          <div class="row row-wrap"><div class="field grow" style="margin:0"><label class="label" for="um-berlepas">Tarikh berlepas (pilihan)</label><input class="input" type="date" id="um-berlepas"></div>
+          <button class="btn btn-primary" data-act="seed">${icon('sparkle')}Jana senarai semak</button></div>
+          <p class="small muted">Atau <a href="#" data-act="add">tambah item sendiri</a>.</p></div></section>`.s;
+        return;
+      }
+      if (!fasa) { const open = FASA.filter((f) => items.some((i) => i.fasa === f[0] && !i.done))[0]; fasa = open ? open[0] : 'SEBELUM'; }
+      const pct = Math.round((100 * data.done) / items.length);
+      const today = todayKey();
+      const inFasa = items.filter((i) => i.fasa === fasa);
+      const groups = KUMPULAN.map((k) => [k, inFasa.filter((i) => i.kumpulan === k[0])]).filter((g) => g[1].length);
+      const dep = data.tarikhBerlepas;
+      box.innerHTML = html`<div class="um-stack">
+        <section class="panel um-trip ${dep ? '' : 'is-unset'}">${icon('plane')}
+          <div class="um-trip__body"><span class="um-trip__label">Tarikh berlepas</span>
+            ${dep ? html`<span class="um-trip__date" data-berlepas>${fmtDate(dep)}</span><span class="um-trip__count">${countdown(dep)}</span>`
+              : html`<span class="um-trip__date">Belum ditetapkan</span><span class="small muted">Tetapkan untuk tarikh sasaran automatik.</span>`}</div>
+          <button class="btn ${dep ? 'btn-outline' : 'btn-primary'} btn-sm" data-act="berlepas">${icon(dep ? 'edit' : 'calendar', 'i-sm')}${dep ? 'Ubah' : 'Tetapkan'}</button></section>
+        <section class="panel um-hero"><div class="um-hero__pct">${pct}%</div><div class="um-hero__body"><strong>${fmtNum(data.done)} daripada ${fmtNum(items.length)} perkara siap</strong>
+          <div class="um-track" role="progressbar" aria-label="Kemajuan persiapan" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></div></div>
+          <button class="btn btn-outline btn-sm" data-act="add">${icon('plus', 'i-sm')}Tambah item</button></section>
+        <div class="segmented" role="group" aria-label="Fasa">${FASA.map((f) => {
+          const all = items.filter((i) => i.fasa === f[0]);
+          return html`<button type="button" data-fasa="${f[0]}" aria-pressed="${f[0] === fasa}">${f[1]} ${all.filter((i) => i.done).length}/${all.length}</button>`;
+        })}</div>
+        ${groups.length ? groups.map((g) => html`<section class="panel um-group">
+          <div class="um-group__head"><h3>${g[0][1]}</h3><span class="um-count">${g[1].filter((i) => i.done).length}/${g[1].length}</span></div>
+          <div>${g[1].map((i) => html`<div class="um-row ${i.done ? 'is-done' : ''}">
+            <input type="checkbox" id="cb-${i.id}" data-tick="${i.id}" ${i.done ? raw('checked') : ''}>
+            <label class="um-row__body" for="cb-${i.id}"><span class="um-row__title">${i.perkara}</span>
+              ${i.catatan ? html`<span class="um-row__note">${i.catatan}</span>` : ''}
+              ${i.tarikhSasar && !i.done ? html`<span class="um-row__date ${i.tarikhSasar === today ? 'is-today' : ''}">${i.tarikhSasar === today ? 'Hari ini' : (i.tarikhSasar < today ? 'Lewat · ' : 'Sasaran · ') + fmtDate(i.tarikhSasar)}</span>` : ''}</label>
+            <button class="icon-btn" data-edit="${i.id}" aria-label="Sunting ${i.perkara}">${icon('edit', 'i-sm')}</button></div>`)}</div></section>`)
+          : html`<div class="panel">${empty('Tiada item dalam fasa ini', 'Tambah item sendiri jika perlu.')}</div>`}
+      </div>`.s;
+    };
+    const load = async () => {
+      try { data = await call('umrah.semak.list'); draw(); } catch (err) { box.innerHTML = errorState(err, 'reload').s; }
+    };
+    const form = (i) => openForm({
+      title: i ? 'Sunting item' : 'Tambah item', id: i && i.id, action: 'umrah.semak.save', delAction: 'umrah.semak.delete', done: load,
+      body: html`${field('s-perkara', 'Perkara', html`<input class="input" id="s-perkara" name="perkara" maxlength="150" required value="${i ? i.perkara : ''}">`, true)}
+        ${field('s-fasa', 'Fasa', html`<select class="select" id="s-fasa" name="fasa">${options(FASA, i ? i.fasa : (fasa || 'SEBELUM'))}</select>`)}
+        ${field('s-kumpulan', 'Kumpulan', html`<select class="select" id="s-kumpulan" name="kumpulan">${options(KUMPULAN, i ? i.kumpulan : 'LAIN')}</select>`)}
+        ${field('s-tarikh', 'Tarikh sasaran', html`<input class="input" type="date" id="s-tarikh" name="tarikhSasar" value="${i ? i.tarikhSasar : ''}">`, false,
+          data.tarikhBerlepas ? 'Tarikh ini ikut beranjak jika tarikh berlepas diubah.' : '')}
+        ${field('s-catatan', 'Catatan', html`<textarea class="textarea" id="s-catatan" name="catatan" maxlength="500" style="min-height:80px">${i ? i.catatan : ''}</textarea>`)}`
+    });
+    const berlepasForm = () => {
+      const lama = data.tarikhBerlepas;
+      const m = modal({ title: lama ? 'Ubah tarikh berlepas' : 'Tetapkan tarikh berlepas',
+        body: html`<form novalidate>
+          ${field('bp-tarikh', 'Tarikh berlepas', html`<input class="input" type="date" id="bp-tarikh" name="tarikhBerlepas" required value="${lama || ''}">`, true,
+            'Tarikh sasaran senarai semak (cth. pasport H-5, beg H-2) dikira semula. Item yang anda tetapkan tarikh sendiri tanpa tarikh berlepas tidak diubah.')}
+          ${lama ? html`<label class="check mt-3"><input type="checkbox" name="anjakJadual" id="bp-jadual" checked>Anjakkan juga tarikh aktiviti dalam Jadual</label>
+            <p class="small muted mt-2" data-beza></p>` : ''}
+        </form>`,
+        foot: html`<button class="btn btn-outline" data-close>Batal</button><button class="btn btn-primary" data-act="save">Simpan</button>` });
+      const form = qs('form', m.el);
+      form.addEventListener('submit', (e) => e.preventDefault());
+      const beza = qs('[data-beza]', m.el);
+      const showBeza = () => {
+        const v = qs('#bp-tarikh', m.el).value;
+        if (!beza) return;
+        if (!v || !lama || v === lama) { beza.textContent = ''; return; }
+        const n = Math.round((new Date(v + 'T00:00:00Z') - new Date(lama + 'T00:00:00Z')) / 86400000);
+        beza.textContent = (n > 0 ? 'Ditunda ' + n : 'Dipercepat ' + (-n)) + ' hari berbanding ' + fmtDate(lama) + '.';
+      };
+      qs('#bp-tarikh', m.el).addEventListener('input', showBeza);
+      on(m.el, 'click', '[data-act="save"]', (e, b) => busy(b, async () => {
+        const v = formData(form);
+        try {
+          const res = await call('umrah.berlepas.set', { tarikhBerlepas: v.tarikhBerlepas, anjakJadual: !!v.anjakJadual });
+          data = res; m.close(); draw();
+          toast('Tarikh berlepas: ' + fmtDate(res.tarikhBerlepas) + '. ' + res.dianjak + ' tarikh sasaran dikemas kini' + (res.jadualDianjak ? ', ' + res.jadualDianjak + ' aktiviti jadual dianjak.' : '.'));
+        } catch (err) { if (!fieldErrors(form, err)) toastError(err); }
+      }));
+    };
+    on(box, 'click', '[data-act="berlepas"]', () => berlepasForm());
+    on(box, 'click', '[data-fasa]', (e, b) => { fasa = b.getAttribute('data-fasa'); KD.router.setQuery({ tab: 'semak', fasa }); draw(); });
+    on(box, 'click', '[data-act="reload"]', load);
+    on(box, 'click', '[data-act="add"]', (e) => { e.preventDefault(); form(null); });
+    on(box, 'click', '[data-edit]', (e, b) => form(data.items.filter((x) => x.id === b.getAttribute('data-edit'))[0]));
+    on(box, 'click', '[data-act="seed"]', (e, b) => busy(b, async () => {
+      try {
+        const d = qs('#um-berlepas', box).value;
+        data = await call('umrah.semak.seed', d ? { tarikhBerlepas: d } : {});
+        toast(data.total + ' item ditambah.'); fasa = ''; draw();
+      } catch (err) { toastError(err); }
+    }));
+    on(box, 'change', '[data-tick]', async (e, cb) => {
+      const id = cb.getAttribute('data-tick');
+      cb.disabled = true;
+      try {
+        const res = await call('umrah.semak.toggle', { id, done: cb.checked });
+        const it = data.items.filter((x) => x.id === id)[0];
+        if (it.done !== res.done) data.done += res.done ? 1 : -1;
+        Object.assign(it, res); draw();
+      } catch (err) { cb.checked = !cb.checked; cb.disabled = false; toastError(err); }
+    });
+    box.innerHTML = skeletonList(4).s;
+    await load();
+  }
+
+  /* ---- Perbelanjaan ---- */
+  async function belanja(box) {
+    let data = null;
+    const draw = () => {
+      const s = data.ringkasan;
+      const cats = KATEGORI.filter((k) => s.kategori[k[0]]).sort((a, b) => s.kategori[b[0]] - s.kategori[a[0]]);
+      const max = cats.length ? Math.max.apply(null, cats.map((k) => s.kategori[k[0]])) : 1;
+      box.innerHTML = html`<div class="um-stack">
+        <div class="row spread row-wrap"><p class="muted" style="margin:0">Anggaran RM mengikut kadar 1 SAR = RM ${s.kadar}.</p><button class="btn btn-primary" data-act="add">${icon('plus')}Rekod belanja</button></div>
+        ${data.items.length ? html`<div class="um-sum">
+            <div class="stat"><div class="stat__label">${icon('coins')}Jumlah anggaran</div><div class="stat__value">${money(s.jumlahRm, 'RM')}</div><div class="stat__note">${fmtNum(s.bilangan)} rekod</div></div>
+            <div class="stat"><div class="stat__label">Dalam Riyal</div><div class="stat__value">${money(s.sar, 'SAR')}</div></div>
+            <div class="stat"><div class="stat__label">Dalam Ringgit</div><div class="stat__value">${money(s.rm, 'RM')}</div></div></div>
+          <section class="panel"><div class="panel-head"><h3>Mengikut kategori (RM)</h3></div>
+            <div class="hbars mt-4">${cats.map((k) => html`<div class="hbar"><span>${k[1]}</span><span class="hbar__track"><span class="hbar__fill" style="width:${(100 * s.kategori[k[0]] / max).toFixed(1)}%"></span></span><span class="hbar__val">${fmtNum(Math.round(s.kategori[k[0]]))}</span></div>`)}</div></section>
+          <section class="panel panel-flush"><div>${data.items.map((i) => html`<div class="um-exp">
+            <div style="min-width:0"><div class="um-row__title">${i.perkara}</div><div class="um-row__note">${[label(KATEGORI, i.kategori), label(LOKASI, i.lokasi), i.tarikh ? fmtDate(i.tarikh) : ''].filter(Boolean).join(' · ')}</div></div>
+            <div class="um-exp__amt">${money(i.jumlah, i.matawang)}${i.matawang === 'SAR' ? html`<span class="um-exp__rm">≈ ${money(i.jumlahRm, 'RM')}</span>` : ''}</div>
+            <button class="icon-btn" data-edit="${i.id}" aria-label="Sunting ${i.perkara}">${icon('edit', 'i-sm')}</button></div>`)}</div></section>`
+          : html`<div class="panel">${empty('Belum ada rekod belanja', 'Catat belanja makan, ole-ole, dam dan sedekah. Jumlah dalam Riyal ditukar ke anggaran RM.')}</div>`}
+      </div>`.s;
+    };
+    const load = async () => { try { data = await call('umrah.belanja.list'); draw(); } catch (err) { box.innerHTML = errorState(err, 'reload').s; } };
+    const form = (i) => openForm({
+      title: i ? 'Sunting belanja' : 'Rekod belanja', id: i && i.id, action: 'umrah.belanja.save', delAction: 'umrah.belanja.delete', done: load,
+      body: html`${field('b-perkara', 'Perkara', html`<input class="input" id="b-perkara" name="perkara" maxlength="120" required value="${i ? i.perkara : ''}" placeholder="cth. Kurma Ajwa 1kg">`, true)}
+        <div class="row row-wrap" style="align-items:flex-start">
+          <div class="grow">${field('b-jumlah', 'Jumlah', html`<input class="input" id="b-jumlah" name="jumlah" inputmode="decimal" required value="${i ? String(i.jumlah) : ''}" placeholder="0.00">`, true)}</div>
+          <div style="width:110px">${field('b-mw', 'Mata wang', html`<select class="select" id="b-mw" name="matawang">${options([['SAR', 'SAR'], ['RM', 'RM']], i ? i.matawang : 'SAR')}</select>`)}</div></div>
+        ${field('b-kat', 'Kategori', html`<select class="select" id="b-kat" name="kategori">${options(KATEGORI, i ? i.kategori : 'MAKAN')}</select>`)}
+        ${field('b-lokasi', 'Lokasi', html`<select class="select" id="b-lokasi" name="lokasi">${options(LOKASI, i ? i.lokasi : 'MAKKAH')}</select>`)}
+        ${field('b-tarikh', 'Tarikh', html`<input class="input" type="date" id="b-tarikh" name="tarikh" value="${i ? i.tarikh : todayKey()}">`)}
+        ${field('b-catatan', 'Catatan', html`<textarea class="textarea" id="b-catatan" name="catatan" maxlength="500" style="min-height:70px">${i ? i.catatan : ''}</textarea>`)}`
+    });
+    on(box, 'click', '[data-act="reload"]', load);
+    on(box, 'click', '[data-act="add"]', () => form(null));
+    on(box, 'click', '[data-edit]', (e, b) => form(data.items.filter((x) => x.id === b.getAttribute('data-edit'))[0]));
+    box.innerHTML = skeletonList(3).s;
+    await load();
+  }
+
+  /* ---- Jadual & ziarah ---- */
+  async function jadual(box) {
+    let data = null;
+    const draw = () => {
+      const days = [];
+      data.items.forEach((i) => { const last = days[days.length - 1]; if (last && last[0] === i.tarikh) last[1].push(i); else days.push([i.tarikh, [i]]); });
+      const today = todayKey();
+      box.innerHTML = html`<div class="um-stack">
+        <div class="row spread row-wrap"><p class="muted" style="margin:0">Itinerari daripada agensi: penerbangan, hotel, ziarah dan ibadah.</p><button class="btn btn-primary" data-act="add">${icon('plus')}Tambah aktiviti</button></div>
+        ${days.length ? days.map((g) => html`<section class="panel um-day ${g[0] === today ? 'is-today' : ''}">
+            <div class="um-day__head"><h3>${fmtDate(g[0])}</h3>${g[0] === today ? html`<span class="badge badge-maroon">Hari ini</span>` : ''}</div>
+            <div>${g[1].map((i) => html`<div class="um-act"><span class="um-act__time">${i.masa || '–'}</span>
+              <div><div class="um-act__title">${i.aktiviti}</div><div class="um-act__meta">${[label(LOKASI, i.bandar), label(JENIS, i.jenis), i.tempat].filter(Boolean).join(' · ')}</div>
+                ${i.hubungi ? html`<div class="um-act__meta">${icon('user', 'i-sm')} ${i.hubungi}</div>` : ''}${i.catatan ? html`<div class="um-act__meta">${i.catatan}</div>` : ''}</div>
+              <button class="icon-btn" data-edit="${i.id}" aria-label="Sunting ${i.aktiviti}">${icon('edit', 'i-sm')}</button></div>`)}</div></section>`)
+          : html`<div class="panel">${empty('Belum ada aktiviti', 'Masukkan jadual harian di Makkah dan Madinah.')}</div>`}
+      </div>`.s;
+    };
+    const load = async () => { try { data = await call('umrah.jadual.list'); draw(); } catch (err) { box.innerHTML = errorState(err, 'reload').s; } };
+    const form = (i) => openForm({
+      title: i ? 'Sunting aktiviti' : 'Tambah aktiviti', id: i && i.id, action: 'umrah.jadual.save', delAction: 'umrah.jadual.delete', done: load,
+      body: html`${field('j-akt', 'Aktiviti', html`<input class="input" id="j-akt" name="aktiviti" maxlength="120" required value="${i ? i.aktiviti : ''}" placeholder="cth. Ziarah Masjid Quba'">`, true)}
+        <div class="row row-wrap" style="align-items:flex-start"><div class="grow">${field('j-tarikh', 'Tarikh', html`<input class="input" type="date" id="j-tarikh" name="tarikh" required value="${i ? i.tarikh : todayKey()}">`, true)}</div>
+          <div style="width:130px">${field('j-masa', 'Masa', html`<input class="input" type="time" id="j-masa" name="masa" value="${i ? i.masa : ''}">`)}</div></div>
+        ${field('j-bandar', 'Bandar', html`<select class="select" id="j-bandar" name="bandar">${options(LOKASI, i ? i.bandar : 'MAKKAH')}</select>`)}
+        ${field('j-jenis', 'Jenis', html`<select class="select" id="j-jenis" name="jenis">${options(JENIS, i ? i.jenis : 'IBADAH')}</select>`)}
+        ${field('j-tempat', 'Tempat / alamat', html`<input class="input" id="j-tempat" name="tempat" maxlength="200" value="${i ? i.tempat : ''}">`)}
+        ${field('j-hub', 'No. telefon (mutawwif / hotel)', html`<input class="input" type="tel" id="j-hub" name="hubungi" value="${i ? i.hubungi : ''}">`)}
+        ${field('j-cat', 'Catatan', html`<textarea class="textarea" id="j-cat" name="catatan" maxlength="500" style="min-height:70px">${i ? i.catatan : ''}</textarea>`)}`
+    });
+    on(box, 'click', '[data-act="reload"]', load);
+    on(box, 'click', '[data-act="add"]', () => form(null));
+    on(box, 'click', '[data-edit]', (e, b) => form(data.items.filter((x) => x.id === b.getAttribute('data-edit'))[0]));
+    box.innerHTML = skeletonList(3).s;
+    await load();
+  }
+
+  /* ---- Titipan doa (Kumpul Doa sedia ada) ---- */
+  function titipan(box) {
+    box.innerHTML = html`<div class="um-stack">
+      <section class="panel"><h3>Titipan doa keluarga & sahabat</h3>
+        <p class="muted mt-2">Cipta pautan Kumpul Doa dan kongsikan melalui WhatsApp. Keluarga mengirim hajat tanpa perlu mendaftar. Di Tanah Suci, baca satu persatu dan tanda "Telah dibacakan" supaya pengirim dimaklumkan.</p></section>
+      <div class="um-titipan">
+        <a href="#/kumpul">${icon('link')}Kumpul Doa<small>Cipta & kongsi pautan titipan</small></a>
+        <a href="#/senarai?scope=RECEIVED">${icon('inbox')}Doa diterima<small>Semua titipan yang masuk</small></a>
+        <a href="#/baca">${icon('book')}Baca satu-persatu<small>Mod bacaan di Multazam, Raudhah, Safa-Marwah</small></a>
+      </div></div>`.s;
+  }
+
+  /* ---- Panduan ---- */
+  function panduan(box) {
+    box.innerHTML = html`<div class="um-stack" style="max-width:780px">
+      <section class="panel um-stack"><h3>Langkah Umrah</h3>
+        <ol class="um-steps">
+          <li><div><b>Ihram di miqat</b>Mandi sunat, pakai ihram, solat sunat ihram jika berpeluang, kemudian berniat Umrah sebelum melepasi miqat.</div></li>
+          <li><div><b>Tawaf 7 pusingan</b>Mula dari garisan Hajarul Aswad dengan Ka'bah di sebelah kiri. Lelaki ber-idtiba' dan ramal pada 3 pusingan pertama.</div></li>
+          <li><div><b>Solat sunat Tawaf & minum Zamzam</b>Solat 2 rakaat di belakang Maqam Ibrahim atau di mana-mana ruang, kemudian minum Zamzam dan berdoa.</div></li>
+          <li><div><b>Sa'ie 7 kali</b>Bermula di bukit Safa dan berakhir di Marwah. Lelaki berlari-lari anak di antara dua lampu hijau.</div></li>
+          <li><div><b>Tahallul</b>Lelaki bercukur atau bergunting; wanita memotong hujung rambut sekurang-kurangnya 3 helai. Umrah selesai.</div></li>
+        </ol></section>
+      <section class="panel um-stack"><h3>Lafaz niat Umrah</h3>
+        <p class="um-ar" lang="ar">نَوَيْتُ الْعُمْرَةَ وَأَحْرَمْتُ بِهَا لِلّٰهِ تَعَالَى</p>
+        <p class="um-rumi">Nawaitul 'umrata wa ahramtu biha lillahi ta'ala.</p>
+        <p style="margin:0">Sahaja aku berniat Umrah dan berihram dengannya kerana Allah Ta'ala.</p></section>
+      <section class="panel um-stack"><h3>Talbiah</h3>
+        <p class="um-ar" lang="ar">لَبَّيْكَ اللّٰهُمَّ لَبَّيْكَ، لَبَّيْكَ لَا شَرِيْكَ لَكَ لَبَّيْكَ، إِنَّ الْحَمْدَ وَالنِّعْمَةَ لَكَ وَالْمُلْكَ، لَا شَرِيْكَ لَكَ</p>
+        <p class="um-rumi">Labbaik Allahumma labbaik, labbaika la syarika laka labbaik, innal hamda wan ni'mata laka wal mulk, la syarika lak.</p>
+        <p class="small muted" style="margin:0">Dibaca selepas berniat ihram hingga mula Tawaf.</p></section>
+      <section class="panel um-stack"><h3>Larangan ketika ihram</h3>
+        <ul class="um-list">
+          <li>Memakai wangian pada badan atau pakaian</li>
+          <li>Memotong atau mencabut rambut dan bulu, serta memotong kuku</li>
+          <li>Lelaki: memakai pakaian berjahit yang melingkungi badan dan menutup kepala</li>
+          <li>Wanita: menutup muka dan memakai sarung tangan</li>
+          <li>Memburu atau membunuh binatang buruan darat</li>
+          <li>Akad nikah, bercumbu dan bersetubuh</li>
+          <li>Bertengkar, mencarut dan berbuat maksiat</li>
+        </ul>
+        <p class="small muted" style="margin:0">Larangan tamat selepas tahallul. Rujuk mutawwif jika terlanggar larangan; sebahagiannya dikenakan dam.</p></section>
+      <div class="alert alert-info">Panduan ringkas ini sebagai peringatan. Ikut bimbingan mutawwif dan kursus Umrah anda untuk hukum yang lebih terperinci.</div>
+    </div>`.s;
+  }
+
+  const RENDER = { semak, belanja, jadual, titipan, panduan };
+
+  KD.views.umrah = {
+    async render(el, params, query) {
+      const tab = RENDER[query.tab] ? query.tab : 'semak';
+      el.innerHTML = html`<div class="page-head"><div><h1>Planner Umrah</h1><p>Persiapan, perbelanjaan, jadual dan titipan doa dalam satu tempat.</p></div></div>
+        <div class="segmented um-tabs" role="tablist" aria-label="Bahagian">${TABS.map((t) => html`<button type="button" role="tab" data-tab="${t[0]}" aria-pressed="${t[0] === tab}" aria-selected="${t[0] === tab}">${t[2]}</button>`)}</div>
+        <div data-um-body></div>`.s;
+      on(el, 'click', '[data-tab]', (e, b) => KD.router.go('/umrah?tab=' + b.getAttribute('data-tab')));
+      await RENDER[tab](qs('[data-um-body]', el), query);
+    }
+  };
+
+  /** Kad ringkas di Utama: kemajuan senarai semak. */
+  KD.views.umrahDashCard = async function (box) {
+    if (!box) return;
+    try {
+      const d = await call('umrah.semak.list');
+      const pct = d.total ? Math.round((100 * d.done) / d.total) : 0;
+      box.innerHTML = html`<section class="panel um-dash">${icon('kaaba')}
+        <div class="um-dash__body"><strong>Planner Umrah</strong>${d.total
+          ? html`${d.tarikhBerlepas ? html`<div class="um-trip__count">${icon('plane', 'i-sm')} ${fmtDate(d.tarikhBerlepas)} · ${countdown(d.tarikhBerlepas)}</div>` : ''}<div class="small muted">${fmtNum(d.done)} daripada ${fmtNum(d.total)} persiapan siap (${pct}%)</div><div class="um-track"><span style="width:${pct}%"></span></div>`
+          : html`<div class="small muted">Senarai semak, perbelanjaan, jadual dan panduan Umrah.</div>`}</div>
+        <a class="btn btn-outline btn-sm" href="#/umrah">${d.total ? 'Buka' : 'Mula'}</a></section>`.s;
+    } catch (e) { box.innerHTML = ''; }
+  };
+})(window.KD);
+</script>

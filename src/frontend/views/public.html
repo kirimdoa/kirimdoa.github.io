@@ -1,0 +1,300 @@
+<script>
+/**
+ * Paparan awam: Landing, Log Masuk, Daftar, Lupa Kata Laluan, halaman pautan Kumpul Doa.
+ */
+(function (KD) {
+  'use strict';
+  const { html, raw, qs, on, formData, fmtNum, requestId } = KD.utils;
+  const { icon, star, skyline, toast, toastError, busy, fieldErrors } = KD.ui;
+  const cfg = () => KD.config || {};
+
+  const BISMILLAH = 'بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ';
+
+  function publicTop(dark) {
+    const loggedIn = KD.auth.loggedIn();
+    return html`<header class="public-top"><a class="brand" href="#/">${star()}<span>${cfg().SYSTEM_NAME || 'Kirim Doa'}</span></a>
+      <nav class="row">${loggedIn
+        ? html`<a class="btn ${dark ? 'btn-light' : 'btn-outline'} btn-sm" href="#/utama">Buka aplikasi</a>`
+        : html`<a class="btn ${dark ? 'btn-light' : 'btn-ghost'} btn-sm" href="#/log-masuk">Log Masuk</a><a class="btn ${dark ? 'btn-cream' : 'btn-primary'} btn-sm" href="#/daftar">Daftar</a>`}</nav></header>`;
+  }
+
+  function publicFoot() {
+    return html`<footer class="public-foot"><nav><button class="btn-link" data-scroll="tentang">Tentang ${cfg().SYSTEM_NAME || 'Kirim Doa'}</button><button class="btn-link" data-scroll="panduan">Panduan</button><button class="btn-link" data-scroll="maklum-balas">Maklum Balas</button></nav>
+      <div>${cfg().SYSTEM_NAME || 'Kirim Doa'}: ${cfg().SYSTEM_TAGLINE || ''}${cfg().ORG_NAME ? html`<br>${cfg().ORG_NAME}` : ''}</div></footer>`;
+  }
+
+  function passwordField(name, label, autocomplete, hint) {
+    return html`<div class="field"><label class="label" for="f-${name}">${label}</label>
+      <div class="input-group"><input class="input" id="f-${name}" name="${name}" type="password" autocomplete="${autocomplete}" required minlength="8" maxlength="128">
+      <button type="button" class="icon-btn" data-act="toggle-pw" aria-label="Tunjuk kata laluan">${icon('eye')}</button></div>${hint ? html`<span class="hint">${hint}</span>` : ''}</div>`;
+  }
+  function bindPwToggle(root) {
+    on(root, 'click', '[data-act="toggle-pw"]', (e, btn) => {
+      const input = btn.parentElement.querySelector('input');
+      const show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      btn.innerHTML = icon(show ? 'eye-off' : 'eye').s;
+      btn.setAttribute('aria-label', show ? 'Sembunyi kata laluan' : 'Tunjuk kata laluan');
+    });
+  }
+
+  // ---------------------------------------------------------------- Landing
+  KD.views.landing = {
+    async render(el) {
+      const c = cfg();
+      el.innerHTML = html`
+        <section class="hero">
+          ${publicTop(true)}
+          <div class="hero__arch arch">
+            ${star('hero__star')}
+            <div class="hero__bismillah arabic" lang="ar">${BISMILLAH}</div>
+            <h1 class="hero__title">${c.SYSTEM_NAME || 'Kirim Doa'}</h1>
+            <p class="hero__tag">${c.SYSTEM_TAGLINE || 'Doa anda, cahaya hati'}</p>
+            <p class="hero__msg">${c.LANDING_MESSAGE || ''}</p>
+            <div class="hero__cta">
+              ${KD.auth.loggedIn() ? html`<a class="btn btn-cream btn-lg" href="#/hantar">${icon('send')}Hantar Doa</a><a class="btn btn-light btn-lg" href="#/utama">Buka aplikasi</a>`
+                : html`${c.ALLOW_REGISTRATION !== false ? html`<a class="btn btn-cream btn-lg" href="#/daftar">Daftar Baru</a>` : ''}<a class="btn btn-light btn-lg" href="#/log-masuk">Log Masuk</a>`}
+            </div>
+            <p class="hero__count">Sebanyak <strong>${fmtNum(c.TOTAL_DOA || 0)}</strong> doa telah dikirim melalui ${c.SYSTEM_NAME || 'Kirim Doa'}</p>
+          </div>
+          <div class="hero__skyline">${skyline}</div>
+        </section>
+        <div class="feature-strip">
+          <a class="feature-chip" href="#/kumpul">${icon('link')}Kumpul Doa</a>
+          <a class="feature-chip" href="#/baca">${icon('book')}Baca Satu-Persatu</a>
+          <a class="feature-chip" href="#/senarai?eksport=1">${icon('pdf')}Export ke PDF</a>
+        </div>
+
+        <section class="section" id="panduan">
+          <div class="section-title"><h2>Bagaimana ia berfungsi</h2><p>Kumpulkan doa daripada orang tersayang dalam satu tempat, kemudian bacalah ketika di Tanah Suci.</p></div>
+          <div class="steps">
+            <div class="step"><h3>Daftar dan cipta pautan</h3><p>Buka akaun, kemudian cipta pautan Kumpul Doa dengan nama anda dan tujuan perjalanan.</p></div>
+            <div class="step"><h3>Kongsi kepada keluarga</h3><p>Hantar pautan melalui WhatsApp atau Telegram. Mereka boleh menulis doa tanpa perlu mendaftar.</p></div>
+            <div class="step"><h3>Baca satu per satu</h3><p>Di Multazam atau Raudhah, buka mod baca dan doakan setiap hajat. Eksport ke PDF jika perlu dibaca tanpa internet.</p></div>
+          </div>
+        </section>
+
+        <section class="section" id="tentang" style="padding-top:0">
+          <div class="about">
+            <blockquote class="about__quote">“Dan Tuhanmu berfirman: Berdoalah kepada-Ku, nescaya Aku perkenankan bagimu.”<small>Surah Ghafir, ayat 60</small></blockquote>
+            <div>
+              <h2>Tentang ${c.SYSTEM_NAME || 'Kirim Doa'}</h2>
+              <p class="mt-3">Ramai yang berpesan, “Doakan saya di sana.” Pesanan itu mudah hilang dalam mesej yang bertimbun. ${c.SYSTEM_NAME || 'Kirim Doa'} menyimpan setiap hajat dengan kemas, mengikut kategori, supaya tiada doa yang tertinggal.</p>
+              <p>Doa anda adalah peribadi. Hanya anda dan penerima boleh membacanya, dan pengirim boleh memilih untuk kekal tanpa nama.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="maklum-balas" style="padding-top:0">
+          <div class="panel" style="max-width:640px;margin:0 auto">
+            <h2>Maklum balas</h2><p class="muted mt-2">Ada cadangan atau masalah? Beritahu kami.</p>
+            <form class="mt-6" data-form="feedback" novalidate>
+              <div class="grid grid-2"><div class="field"><label class="label" for="fb-name">Nama</label><input class="input" id="fb-name" name="name" required maxlength="80" autocomplete="name"></div>
+              <div class="field" style="margin-top:0"><label class="label" for="fb-email">Email</label><input class="input" id="fb-email" name="email" type="email" required autocomplete="email"></div></div>
+              <div class="field mt-4"><label class="label" for="fb-msg">Mesej</label><textarea class="textarea" id="fb-msg" name="message" required minlength="10" maxlength="1500"></textarea></div>
+              <div class="hp" aria-hidden="true"><label>Laman web<input name="website" tabindex="-1" autocomplete="off"></label></div>
+              <button class="btn btn-primary mt-4" type="submit">${icon('send')}Hantar maklum balas</button>
+            </form>
+          </div>
+        </section>
+        ${publicFoot()}`.s;
+
+      on(el, 'click', '[data-scroll]', (e, b) => { const t = qs('#' + b.getAttribute('data-scroll'), el); if (t) t.scrollIntoView({ behavior: 'smooth' }); });
+      on(el, 'submit', '[data-form="feedback"]', async (e, form) => {
+        e.preventDefault();
+        const btn = qs('button[type="submit"]', form);
+        await busy(btn, async () => {
+          try {
+            await KD.api.sendFeedback(formData(form));
+            form.reset(); fieldErrors(form, null);
+            toast('Terima kasih. Maklum balas anda telah dihantar.');
+          } catch (err) { if (!fieldErrors(form, err)) toastError(err); }
+        });
+      });
+    }
+  };
+
+  // ---------------------------------------------------------------- Auth
+  function authShell(title, subtitle, body, links) {
+    return html`${publicTop(false)}<main class="auth"><div class="auth-card">
+      <div class="auth-card__head">${star()}<h1 style="font-size:var(--fs-2xl)">${title}</h1><p>${subtitle}</p></div>
+      ${body}${links ? html`<div class="auth-links">${links}</div>` : ''}</div></main>`;
+  }
+
+  KD.views.login = {
+    async render(el) {
+      el.innerHTML = authShell('Log Masuk', 'Assalamualaikum. Selamat kembali.', html`
+        <form data-form="login" novalidate>
+          <div class="field"><label class="label" for="f-email">Email</label><input class="input" id="f-email" name="email" type="email" autocomplete="email" required placeholder="cth. nama@email.com"></div>
+          <div class="field">${passwordField('password', 'Kata laluan', 'current-password')}</div>
+          <label class="check mt-4"><input type="checkbox" name="remember" checked>Ingat saya pada peranti ini</label>
+          <button class="btn btn-primary btn-lg btn-block mt-6" type="submit">${icon('lock')}Log Masuk</button>
+        </form>`, html`<a href="#/daftar">Daftar baru</a><a href="#/lupa-kata-laluan">Lupa kata laluan?</a>`).s;
+      bindPwToggle(el);
+      on(el, 'submit', 'form', async (e, form) => {
+        e.preventDefault();
+        const data = formData(form);
+        await busy(qs('button[type="submit"]', form), async () => {
+          try {
+            const res = await KD.api.login(data);
+            KD.auth.set(res, data.remember);
+            toast('Selamat datang, ' + res.user.fullName + '.');
+            KD.api.getCurrentUser().then((me) => KD.app.setUnread(me.unreadNotifications)).catch(() => {});
+            KD.app.afterLogin();
+          } catch (err) { if (!fieldErrors(form, err)) toastError(err); }
+        });
+      });
+    }
+  };
+
+  KD.views.register = {
+    async render(el) {
+      if (cfg().ALLOW_REGISTRATION === false) {
+        el.innerHTML = authShell('Pendaftaran ditutup', 'Pendaftaran akaun baharu tidak dibuka buat masa ini.', html`<a class="btn btn-outline btn-block" href="#/log-masuk">Log masuk</a>`).s;
+        return;
+      }
+      el.innerHTML = authShell('Daftar Baru', 'Cipta akaun untuk mula mengumpul doa.', html`
+        <form data-form="register" novalidate>
+          <div class="field"><label class="label" for="f-fullName">Nama penuh <span class="req">*</span></label><input class="input" id="f-fullName" name="fullName" required minlength="3" maxlength="80" autocomplete="name"></div>
+          <div class="field"><label class="label" for="f-email">Email <span class="req">*</span></label><input class="input" id="f-email" name="email" type="email" required autocomplete="email"></div>
+          <div class="field"><label class="label" for="f-phone">No. telefon</label><input class="input" id="f-phone" name="phone" type="tel" autocomplete="tel" placeholder="cth. 012-345 6789"></div>
+          <div class="field">${passwordField('password', 'Kata laluan *', 'new-password', 'Sekurang-kurangnya 8 aksara, dengan huruf dan nombor.')}</div>
+          <label class="check mt-4"><input type="checkbox" name="remember">Ingat saya pada peranti ini</label>
+          <button class="btn btn-primary btn-lg btn-block mt-6" type="submit">Daftar</button>
+        </form>`, html`<span class="muted">Sudah ada akaun?</span><a href="#/log-masuk">Log masuk</a>`).s;
+      bindPwToggle(el);
+      on(el, 'submit', 'form', async (e, form) => {
+        e.preventDefault();
+        const data = formData(form);
+        await busy(qs('button[type="submit"]', form), async () => {
+          try {
+            const res = await KD.api.register(data);
+            KD.auth.set(res, data.remember);
+            toast('Akaun anda telah didaftarkan. Selamat datang!');
+            KD.app.setUnread(1);
+            KD.app.afterLogin();
+          } catch (err) { if (!fieldErrors(form, err)) toastError(err); }
+        });
+      });
+    }
+  };
+
+  KD.views.forgot = {
+    async render(el) {
+      let email = '';
+      const step1 = () => {
+        el.innerHTML = authShell('Lupa Kata Laluan', 'Kami akan menghantar kod 6 digit ke email anda.', html`
+          <form data-form="request" novalidate>
+            <div class="field"><label class="label" for="f-email">Email</label><input class="input" id="f-email" name="email" type="email" required autocomplete="email"></div>
+            <button class="btn btn-primary btn-lg btn-block mt-6" type="submit">${icon('mail')}Hantar kod</button>
+          </form>`, html`<a href="#/log-masuk">Kembali ke log masuk</a>`).s;
+      };
+      const step2 = () => {
+        el.innerHTML = authShell('Tetapkan kata laluan baharu', 'Masukkan kod yang dihantar ke ' + email + '.', html`
+          <form data-form="reset" novalidate>
+            <div class="field"><label class="label" for="f-code">Kod 6 digit</label><input class="input" id="f-code" name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autocomplete="one-time-code" style="letter-spacing:.4em;font-size:1.2rem"></div>
+            <div class="field">${passwordField('newPassword', 'Kata laluan baharu', 'new-password', 'Sekurang-kurangnya 8 aksara, dengan huruf dan nombor.')}</div>
+            <button class="btn btn-primary btn-lg btn-block mt-6" type="submit">Tetapkan kata laluan</button>
+          </form>`, html`<button class="btn-link" data-act="again">Hantar semula kod</button><a href="#/log-masuk">Log masuk</a>`).s;
+        bindPwToggle(el);
+      };
+      step1();
+      on(el, 'click', '[data-act="again"]', step1);
+      on(el, 'submit', 'form', async (e, form) => {
+        e.preventDefault();
+        const data = formData(form);
+        await busy(qs('button[type="submit"]', form), async () => {
+          try {
+            if (form.dataset.form === 'request') {
+              const r = await KD.api.requestReset(data);
+              email = data.email;
+              toast(r.message);
+              step2();
+            } else {
+              await KD.api.resetPassword({ email, code: data.code, newPassword: data.newPassword });
+              toast('Kata laluan telah ditetapkan. Sila log masuk.');
+              KD.router.go('/log-masuk');
+            }
+          } catch (err) { if (!fieldErrors(form, err)) toastError(err); }
+        });
+      });
+    }
+  };
+
+  // ---------------------------------------------------------------- Kumpul Doa (awam)
+  const OCCASION = { UMRAH: 'Umrah', HAJI: 'Haji', PERJALANAN: 'Perjalanan', PEPERIKSAAN: 'Peperiksaan', KESIHATAN: 'Kesihatan', LAIN: '' };
+  KD.views.occasionLabel = (o) => OCCASION[o] || '';
+
+  KD.views.collect = {
+    async render(el, params) {
+      el.innerHTML = html`${publicTop(false)}<main class="collect"><div class="collect__head arch">${star()}<div class="skel skel-line" style="width:60%;margin:12px auto;opacity:.3"></div></div><div class="collect__form">${KD.ui.skeletonList(2)}</div></main>`.s;
+      let link;
+      try {
+        link = await KD.api.getPublicLink(String(params.code || '').toUpperCase());
+      } catch (err) {
+        el.innerHTML = html`${publicTop(false)}<main class="auth"><div class="auth-card" style="text-align:center">${star()}<h2 class="mt-4">Pautan tidak ditemui</h2><p class="muted mt-2">Pautan ini mungkin salah atau telah dipadam. Minta pautan baharu daripada penghantar.</p><a class="btn btn-outline mt-6" href="#/">Ke halaman utama</a></div></main>`.s;
+        return;
+      }
+      const draw = () => {
+        const head = html`<div class="collect__head arch">${star()}
+          ${OCCASION[link.occasion] ? html`<span class="badge badge-gold">${OCCASION[link.occasion]}</span>` : ''}
+          <h1 class="mt-3">${link.title}</h1><div class="collect__for">untuk ${link.displayName}</div>
+          ${link.message ? html`<p>${link.message}</p>` : ''}</div>`;
+        if (!link.accepting) {
+          el.innerHTML = html`${publicTop(false)}<main class="collect">${head}<div class="collect__form"><div class="alert alert-info">${icon('info')}<div>Pautan ini tidak lagi menerima doa. Terima kasih kerana sudi mendoakan.</div></div></div></main>${publicFoot()}`.s;
+          return;
+        }
+        const me = KD.auth.user();
+        el.innerHTML = html`${publicTop(false)}<main class="collect">${head}
+          <div class="collect__form">
+            <form data-form="collect" novalidate>
+              <div class="field"><label class="label" for="c-name">Nama anda</label><input class="input" id="c-name" name="senderName" maxlength="80" autocomplete="name" value="${me ? me.fullName : ''}" placeholder="cth. Mak Long"></div>
+              ${link.categories.length > 1 ? html`<div class="field"><label class="label" for="c-cat">Kategori <span class="req">*</span></label><select class="select" id="c-cat" name="categoryId" required><option value="">Pilih kategori doa</option>${link.categories.map((c) => html`<option value="${c.id}">${c.nameMs}</option>`)}</select></div>` : ''}
+              <div class="field"><label class="label" for="c-title">Tajuk (pilihan)</label><input class="input" id="c-title" name="title" maxlength="120" placeholder="cth. Untuk kesihatan mak"></div>
+              <div class="field"><label class="label" for="c-text">Isi doa <span class="req">*</span></label><textarea class="textarea" id="c-text" name="doaText" required minlength="${link.doaMinLength}" maxlength="${link.doaMaxLength}" placeholder="Tulis doa atau hajat anda di sini…"></textarea><div class="counter" data-counter>0 / ${link.doaMaxLength}</div></div>
+              ${me ? html`<p class="xs muted mt-2">${icon('bell', 'i-sm')} Anda akan menerima notifikasi dalam aplikasi apabila ${link.displayName} membacakan doa anda.</p>`
+                : html`<div class="field"><label class="label" for="c-email">Email anda (pilihan)</label><input class="input" id="c-email" name="senderEmail" type="email" maxlength="254" autocomplete="email" inputmode="email" placeholder="cth. nama@gmail.com">
+                  <div class="hint">Isi jika anda mahu dimaklumkan apabila ${link.displayName} membacakan doa anda. Email hanya digunakan untuk tujuan ini, tidak dipaparkan kepada sesiapa, dan dipadam selepas makluman dihantar.</div></div>`}
+              <div class="field"><label class="label" for="c-phone">No. WhatsApp anda (pilihan)</label><input class="input" id="c-phone" name="senderPhone" type="tel" maxlength="25" autocomplete="tel" inputmode="tel" placeholder="cth. 012-345 6789">
+                <div class="hint">${link.displayName} boleh memaklumkan anda melalui WhatsApp apabila doa anda dibacakan. Nombor ini hanya dapat dilihat oleh ${link.displayName} dan dipadam 30 hari selepas itu.</div></div>
+              ${link.allowAnonymous ? html`<label class="check mt-4"><input type="checkbox" name="isAnonymous">Hantar tanpa nama (penerima akan melihat “Hamba Allah”)</label>` : ''}
+              <div class="hp" aria-hidden="true"><label>Laman web<input name="website" tabindex="-1" autocomplete="off"></label></div>
+              <button class="btn btn-primary btn-lg btn-block mt-6" type="submit">${icon('send')}Hantar Doa</button>
+              <p class="xs muted mt-3" style="text-align:center">Doa anda hanya dapat dibaca oleh ${link.displayName}.</p>
+            </form>
+          </div></main>${publicFoot()}`.s;
+        const ta = qs('textarea', el);
+        const counter = qs('[data-counter]', el);
+        ta.addEventListener('input', () => { counter.textContent = ta.value.length + ' / ' + link.doaMaxLength; });
+        rid = requestId();
+      };
+      let rid = requestId();
+      draw();
+      on(el, 'submit', 'form', async (e, form) => {
+        e.preventDefault();
+        const data = formData(form);
+        data.code = link.code; data.formToken = link.formToken; data.requestId = rid;
+        await busy(qs('button[type="submit"]', form), async () => {
+          try {
+            await KD.api.submitToLink(data);
+            const notifyNote = [KD.auth.loggedIn() ? 'Anda akan dimaklumkan dalam aplikasi apabila doa anda dibacakan.' : (data.senderEmail ? 'Kami akan menghantar email kepada anda apabila doa anda dibacakan.' : ''),
+              data.senderPhone ? link.displayName + ' boleh memaklumkan anda melalui WhatsApp.' : ''].filter(Boolean).join(' ');
+            qs('.collect__form', el).innerHTML = html`<div class="success-card">${star()}<h2>Doa anda telah dihantar.</h2><p class="muted">Semoga menjadi cahaya dan harapan.</p>${notifyNote ? html`<p class="xs muted mt-2">${notifyNote}</p>` : ''}
+              <div class="row row-wrap mt-6" style="justify-content:center"><button class="btn btn-outline" data-act="again">${icon('plus')}Hantar doa lain</button>${KD.auth.loggedIn() ? '' : html`<a class="btn btn-primary" href="#/daftar">${icon('link')}Cipta pautan anda sendiri</a>`}</div></div>`.s;
+          } catch (err) {
+            if (/tamat tempoh|terlalu cepat/.test(err.message)) {
+              try { link = await KD.api.getPublicLink(link.code); } catch (e2) { /* abaikan */ }
+            }
+            if (!fieldErrors(form, err)) toastError(err);
+          }
+        });
+      });
+      on(el, 'click', '[data-act="again"]', async () => {
+        try { link = await KD.api.getPublicLink(link.code); } catch (e) { /* abaikan */ }
+        draw();
+      });
+      on(el, 'click', '[data-scroll]', () => KD.router.go('/'));
+    }
+  };
+})(window.KD);
+</script>

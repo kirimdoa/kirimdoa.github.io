@@ -1,0 +1,5 @@
+node_modules/
+build/
+e2e-shots/
+.clasp.json
+.clasprc.json
