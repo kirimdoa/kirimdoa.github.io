@@ -744,7 +744,41 @@ p { margin: 0; }
 .um-dash { display: flex; align-items: center; gap: var(--sp-4); flex-wrap: wrap; }
 .um-dash > .i { width: 36px; height: 36px; color: var(--maroon); }
 .um-dash__body { flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: var(--sp-2); }
+/* Kaunter Tawaf & Sa'ie */
+.um-ktr { display: flex; flex-direction: column; align-items: center; gap: var(--sp-4); text-align: center; }
+.um-ktr__btn { width: min(260px, 70vw); aspect-ratio: 1; max-width: 100%; border-radius: 50%; border: 0; cursor: pointer; display: grid; place-items: center; touch-action: manipulation;
+  background: radial-gradient(circle at center, var(--white) 0 60%, transparent 61%), conic-gradient(var(--maroon) calc(var(--p) * 1%), var(--maroon-50) 0); box-shadow: var(--shadow-lift); }
+.um-ktr__btn:active { transform: scale(.98); }
+.um-ktr__btn:focus-visible { outline: none; box-shadow: var(--focus), var(--shadow-lift); }
+.um-ktr__num { font-family: var(--font-display); font-size: clamp(3rem, 16vw, 4.5rem); color: var(--maroon); line-height: 1; font-variant-numeric: tabular-nums; }
+.um-ktr__sub { display: block; font-size: var(--fs-sm); color: var(--muted); margin-top: var(--sp-2); }
+.um-ktr__dir { font-weight: 700; color: var(--maroon-900); font-size: var(--fs-lg); }
+.um-ktr__done { border: 1px solid var(--success); background: var(--success-50); }
+.um-ktr .row { justify-content: center; }
+.um-doa { text-align: left; width: 100%; display: flex; flex-direction: column; gap: var(--sp-2); }
+.um-doa .um-ar { font-size: 1.35rem; }
+/* Kad penting */
+.um-kad { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-4); }
+.um-kad section { min-width: 0; }
+.um-kad h3 { font-size: var(--fs-md); font-family: var(--font-ui); font-weight: 700; color: var(--maroon-900); margin: 0 0 var(--sp-3); display: flex; gap: var(--sp-2); align-items: center; }
+.um-kv { display: grid; grid-template-columns: minmax(90px, 38%) minmax(0, 1fr); gap: var(--sp-2) var(--sp-3); margin: 0; }
+.um-kv dt { color: var(--muted); font-size: var(--fs-sm); }
+.um-kv:empty::before { content: 'Belum diisi'; grid-column: 1 / -1; color: var(--muted); font-size: var(--fs-sm); }
+.um-note .i { display: inline-block; vertical-align: -2px; width: 14px; height: 14px; }
+.um-kv dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.um-kv a { color: var(--maroon); }
+.um-big-ar { font-family: var(--font-arabic); direction: rtl; text-align: center; font-size: clamp(1.8rem, 8vw, 3rem); line-height: 1.7; color: var(--ink); overflow-wrap: anywhere; }
+.um-sos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-2); }
+.um-sos a { display: flex; flex-direction: column; align-items: center; padding: var(--sp-3) var(--sp-2); border-radius: var(--r-md); border: 1px solid var(--line); text-decoration: none; color: var(--ink); background: var(--white); }
+.um-sos b { font-size: var(--fs-xl); color: var(--danger); font-variant-numeric: tabular-nums; }
+.um-sos span { font-size: var(--fs-xs); color: var(--muted); text-align: center; }
+.um-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 var(--sp-4); }
+.um-form-grid .field { min-width: 0; }
+.um-form-grid h4 { grid-column: 1 / -1; margin: var(--sp-4) 0 var(--sp-2); color: var(--maroon-900); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .06em; }
+.um-form-grid .span2 { grid-column: 1 / -1; }
 @media (max-width: 720px) {
+  .um-kad, .um-form-grid { grid-template-columns: 1fr; }
+  .um-sos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .um-sum { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3); }
   .um-sum > :first-child { grid-column: 1 / -1; }
   .um-sum .stat:not(:first-child) .stat__value { font-size: var(--fs-lg); }

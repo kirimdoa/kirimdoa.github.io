@@ -331,7 +331,7 @@ window.KD = window.KD || {};
   }
 
   /* Baris gilir tulisan luar talian (hanya tindakan idempoten: tanda senarai semak). Dihantar apabila kembali dalam talian. */
-  const QUEUEABLE = ['umrah.semak.toggle'];
+  const QUEUEABLE = ['umrah.semak.toggle', 'doa.markPrayed'];
   function queueGet() { try { return JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]'); } catch (e) { return []; } }
   function queueSave(q) { try { if (q.length) localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); else localStorage.removeItem(QUEUE_KEY); } catch (e) { /* abaikan */ } }
   /** Seperti call(), tetapi jika luar talian tindakan disimpan dan dihantar kemudian. @return {{queued:boolean, data:*}} */
@@ -363,6 +363,27 @@ window.KD = window.KD || {};
     return sent;
   }
   const queueSize = () => queueGet().length;
+
+  /** Tindih "telah dibacakan" yang masih beratur pada senarai doa (cache atau terkini). */
+  function overlayDoas(d) {
+    const ids = queueGet().filter((x) => x.action === 'doa.markPrayed' && x.user === userKey()).map((x) => x.payload.id);
+    if (!ids.length || !d || !d.items) return d;
+    return Object.assign({}, d, { items: d.items.map((x) => (ids.indexOf(x.id) >= 0 ? Object.assign({}, x, { isPrayed: true, canMarkPrayed: false, prayedQueued: true, prayedAt: x.prayedAt || new Date().toISOString() }) : x)) });
+  }
+
+  /** Rangkaian dahulu; jika luar talian, guna salinan tersimpan (cth. senarai doa untuk mod baca di Tanah Suci). */
+  async function callCached(action, payload) {
+    try {
+      const d = await call(action, payload);
+      cacheSet(action, payload, d);
+      return action === 'doa.list' ? overlayDoas(d) : d;
+    } catch (err) {
+      const hit = err.code === 'NETWORK' ? cacheGet(action, payload) : null;
+      if (!hit) throw err;
+      noteOffline(hit.t);
+      return action === 'doa.list' ? overlayDoas(hit.d) : hit.d;
+    }
+  }
   window.addEventListener('online', () => { flushQueue(); });
 
   KD.api = {
@@ -376,6 +397,7 @@ window.KD = window.KD || {};
     flushQueue,
     queueSize,
     queueItems: () => queueGet(),
+    callCached,
     getHome: () => call('user.home'),
     ApiError,
     // Awam
@@ -394,7 +416,7 @@ window.KD = window.KD || {};
     updateProfile: (p) => call('user.updateProfile', p),
     getDashboard: () => call('user.dashboard'),
     // Doa
-    getDoas: (filters) => call('doa.list', filters),
+    getDoas: (filters) => callCached('doa.list', filters),
     getDoa: (id) => call('doa.get', { id }),
     createDoa: (p) => call('doa.create', p),
     updateDoa: (id, p) => call('doa.update', Object.assign({ id }, p)),
@@ -1840,7 +1862,7 @@ window.KD = window.KD || {};
   function prayedStatus(d) {
     if (d.isPrayed) {
       const by = d.isMine && d.direction === 'SENT' && d.ownerName ? html` oleh ${d.ownerName}` : '';
-      return html`<span class="badge badge-success">${icon('check', 'i-sm')}Telah dibacakan</span>${by} <span class="muted xs">${fmtDate(d.prayedAt, true)}</span>`;
+      return html`<span class="badge badge-success">${icon('check', 'i-sm')}Telah dibacakan</span>${by} <span class="muted xs">${fmtDate(d.prayedAt, true)}${d.prayedQueued ? ' · menunggu internet' : ''}</span>`;
     }
     return html`<span class="muted">Belum dibacakan</span>`;
   }
@@ -1858,7 +1880,15 @@ window.KD = window.KD || {};
     let r = null;
     await busy(btn, async () => {
       try {
-        r = await api.markPrayed(d.id);
+        const q = await api.callOrQueue('doa.markPrayed', { id: d.id });
+        if (q.queued) {
+          /* Luar talian (cth. di Multazam/Raudhah): disimpan dalam telefon, pengirim dimaklumkan bila ada internet */
+          r = Object.assign({}, d, { isPrayed: true, canMarkPrayed: false, prayedQueued: true, prayedAt: new Date().toISOString(), senderWhatsApp: false, notified: '' });
+          Object.assign(d, r);
+          toast('Alhamdulillah. Luar talian: ditanda dalam telefon, pengirim akan dimaklumkan apabila ada internet.');
+          return;
+        }
+        r = q.data;
         Object.assign(d, r);
         toast(r.notified === 'APP' ? 'Alhamdulillah. Pengirim telah dimaklumkan dalam aplikasi.' : r.notified === 'EMAIL' ? 'Alhamdulillah. Pengirim telah dimaklumkan melalui email.' : 'Alhamdulillah. Doa ditandakan sudah dibacakan.');
       } catch (err) { toastError(err); }
@@ -2142,6 +2172,14 @@ window.KD = window.KD || {};
         st.total = r.meta.total;
         r.items.forEach((d, k) => { st.items[(page - 1) * PAGE + k] = d; });
         st.loadedPages[page] = true;
+        if (page === 1 && !st.prefetching) {
+          /* Muat awal semua halaman di latar (disimpan dalam telefon) supaya boleh dibaca tanpa internet di Tanah Suci */
+          st.prefetching = true;
+          (async () => {
+            const pages = Math.min(20, Math.ceil(st.total / PAGE));
+            for (let pg = 2; pg <= pages; pg++) { try { await ensure((pg - 1) * PAGE); } catch (e) { break; } }
+          })();
+        }
       }
 
       async function show(i) {
@@ -2179,7 +2217,7 @@ window.KD = window.KD || {};
         if (st.index + 3 >= Object.keys(st.loadedPages).length * PAGE && st.index + 3 < st.total) ensure(st.index + 3).catch(() => {});
       }
 
-      const restart = () => { st.items = []; st.loadedPages = {}; st.total = 0; qs('[data-reader]', el).innerHTML = skeletonList(2).s; show(0); };
+      const restart = () => { st.items = []; st.loadedPages = {}; st.total = 0; st.prefetching = false; qs('[data-reader]', el).innerHTML = skeletonList(2).s; show(0); };
       on(el, 'change', '[data-f="scope"]', (e, s) => { st.scope = s.value; restart(); });
       on(el, 'change', '[data-f="unprayed"]', (e, c) => { st.unprayedOnly = c.checked; restart(); });
       on(el, 'click', '[data-act="prayed"]', async (e, b) => {
@@ -2382,7 +2420,7 @@ window.KD = window.KD || {};
   const { icon, toast, toastError, modal, confirm, skeletonList, empty, errorState, busy, fieldErrors } = KD.ui;
   const call = KD.api.call;
 
-  const TABS = [['semak', 'list', 'Senarai Semak'], ['belanja', 'coins', 'Perbelanjaan'], ['jadual', 'calendar', 'Jadual'], ['titipan', 'hands', 'Titipan Doa'], ['panduan', 'book', 'Panduan']];
+  const TABS = [['semak', 'list', 'Senarai Semak'], ['kaunter', 'kaaba', 'Kaunter Tawaf'], ['kad', 'shield', 'Kad Penting'], ['belanja', 'coins', 'Perbelanjaan'], ['jadual', 'calendar', 'Jadual'], ['titipan', 'hands', 'Titipan Doa'], ['panduan', 'book', 'Panduan']];
   const FASA = [['SEBELUM', 'Sebelum'], ['SEMASA', 'Semasa'], ['SELEPAS', 'Selepas']];
   const KUMPULAN = [['DOKUMEN', 'Dokumen & urusan rasmi'], ['KEWANGAN', 'Kewangan'], ['ROHANI', 'Ilmu & persiapan rohani'], ['KESIHATAN', 'Kesihatan'],
     ['BARANG', 'Barang bawaan'], ['BERLEPAS', 'Hari berlepas'], ['MIQAT', 'Penerbangan & miqat'], ['IBADAH', 'Ibadah Umrah'], ['MAKKAH', 'Di Makkah'],
@@ -2700,7 +2738,161 @@ window.KD = window.KD || {};
     </div>`.s;
   }
 
-  const RENDER = { semak, belanja, jadual, titipan, panduan };
+  /* ---- Kaunter Tawaf & Sa'ie (luar talian, disimpan dalam telefon) ---- */
+  const uid = () => { const u = KD.auth.user(); return (u && u.id) || 'anon'; };
+  const ktrKey = () => 'kd.ktr1.' + uid();
+  const ktrLoad = () => { try { return Object.assign({ mode: 'TAWAF', TAWAF: 0, SAIE: 0 }, JSON.parse(localStorage.getItem(ktrKey()) || '{}')); } catch (e) { return { mode: 'TAWAF', TAWAF: 0, SAIE: 0 }; } };
+  const ktrSave = (s) => { try { localStorage.setItem(ktrKey(), JSON.stringify(s)); } catch (e) { /* storan penuh */ } };
+  let wakeLock = null;
+  async function keepAwake(on) {
+    try {
+      if (on && !wakeLock && navigator.wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); }
+      if (!on && wakeLock) { await wakeLock.release(); wakeLock = null; }
+    } catch (e) { wakeLock = null; }
+  }
+  window.addEventListener('hashchange', () => { if (location.hash.indexOf('tab=kaunter') < 0) keepAwake(false); });
+  const buzz = (p) => { try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) { /* abaikan */ } };
+  const AR_BISMILLAH = 'بِسْمِ اللهِ وَاللهُ أَكْبَرُ';
+  const AR_RABBANA = 'رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ';
+  const AR_SAFA = 'إِنَّ الصَّفَا وَالْمَرْوَةَ مِنْ شَعَائِرِ اللَّهِ';
+  const SEMAK_DONE = { TAWAF: 'Tawaf 7 pusingan', SAIE: 'Sa\'ie 7 kali Safa ke Marwah' };
+
+  function kaunter(box) {
+    let st = ktrLoad();
+    let lastTap = 0;
+    const draw = () => {
+      const m = st.mode, n = st[m], done = n >= 7;
+      const pct = Math.round((n / 7) * 100);
+      const dir = m === 'SAIE' ? (done ? 'Selesai di Marwah' : ((n % 2 === 0) ? 'Safa → Marwah' : 'Marwah → Safa')) : (done ? 'Tawaf selesai' : 'Pusingan ' + (n + 1));
+      const hint = m === 'TAWAF' ? 'Tekan setiap kali melintasi garisan Hajarul Aswad' : 'Tekan setiap kali sampai di ' + (n % 2 === 0 ? 'Marwah' : 'Safa');
+      const guide = m === 'TAWAF'
+        ? html`<div class="um-doa"><strong>Setiap pusingan</strong><span class="small muted">Bila menghadap Hajarul Aswad, angkat tangan (isyarat) dan sebut:</span>
+            <p class="um-ar" lang="ar">${AR_BISMILLAH}</p><p class="um-rumi">Bismillahi wallahu akbar.</p>
+            <span class="small muted">Antara Rukun Yamani dan Hajarul Aswad:</span><p class="um-ar" lang="ar">${AR_RABBANA}</p>
+            <p class="um-rumi">Rabbana atina fid-dunya hasanah, wa fil-akhirati hasanah, wa qina 'adhaban-nar.</p>
+            ${n < 3 ? html`<span class="small muted">Lelaki: ramal (berjalan cepat, langkah dekat) pada 3 pusingan pertama.</span>` : ''}
+            <span class="small muted">Selebihnya berdoalah dengan hajat sendiri, dalam bahasa yang anda fahami.</span></div>`
+        : html`<div class="um-doa">${n === 0 ? html`<strong>Mula di Safa</strong><span class="small muted">Ketika naik ke Safa pada permulaan Sa'ie, bacalah:</span><p class="um-ar" lang="ar">${AR_SAFA}</p>
+              <p class="um-rumi">Innas-Safa wal-Marwata min sha'a'irillah.</p>` : ''}
+            <span class="small muted">Lelaki: berlari-lari anak di antara dua lampu hijau.</span>
+            <span class="small muted">Di Safa dan Marwah, hadap Kaabah dan berdoalah dengan hajat sendiri. Ini juga masa yang baik untuk titipan doa keluarga.</span></div>`;
+      box.innerHTML = html`<div class="um-stack" style="max-width:560px;margin:0 auto">
+        <div class="segmented" role="group" aria-label="Jenis" style="align-self:center">
+          <button type="button" data-ktr-mode="TAWAF" aria-pressed="${m === 'TAWAF'}">Tawaf ${st.TAWAF}/7</button>
+          <button type="button" data-ktr-mode="SAIE" aria-pressed="${m === 'SAIE'}">Sa'ie ${st.SAIE}/7</button></div>
+        <section class="panel um-ktr ${done ? 'um-ktr__done' : ''}">
+          <span class="um-ktr__dir">${dir}</span>
+          <button class="um-ktr__btn" type="button" data-ktr="+1" style="--p:${pct}" ${done ? raw('disabled') : ''} aria-label="${done ? 'Selesai' : 'Tambah satu pusingan'}">
+            <span><span class="um-ktr__num">${n}/7</span><span class="um-ktr__sub">${done ? 'Alhamdulillah' : 'Tekan +1'}</span></span></button>
+          <span class="small muted">${done ? (m === 'TAWAF' ? 'Seterusnya: solat sunat Tawaf 2 rakaat, kemudian minum Zamzam.' : 'Seterusnya: tahallul (bercukur / bergunting).') : hint}</span>
+          <div class="row row-wrap"><button class="btn btn-outline btn-sm" data-ktr="-1" ${n ? '' : raw('disabled')}>${icon('chev-left', 'i-sm')}Undur 1</button>
+            <button class="btn btn-ghost btn-sm" data-ktr="reset" ${n ? '' : raw('disabled')}>${icon('refresh', 'i-sm')}Mula semula</button>
+            ${done ? html`<button class="btn btn-primary btn-sm" data-ktr="semak">${icon('check', 'i-sm')}Tanda dalam senarai semak</button>` : ''}</div>
+        </section>
+        <section class="panel">${guide}</section>
+        <p class="small muted" style="margin:0">Kiraan disimpan dalam telefon ini dan kekal walaupun app ditutup. Skrin dikekalkan hidup semasa halaman ini dibuka (jika telefon menyokong). Ikut bimbingan mutawwif anda.</p>
+      </div>`.s;
+    };
+    on(box, 'click', '[data-ktr-mode]', (e, b) => { st.mode = b.getAttribute('data-ktr-mode'); ktrSave(st); draw(); });
+    on(box, 'click', '[data-ktr]', async (e, b) => {
+      const a = b.getAttribute('data-ktr');
+      const m = st.mode;
+      if (a === '+1') {
+        if (Date.now() - lastTap < 1500) return; /* elak tertekan dua kali dalam kesesakan */
+        lastTap = Date.now();
+        st[m] = Math.min(7, st[m] + 1); ktrSave(st); buzz(st[m] >= 7 ? [200, 100, 200] : 60); draw();
+      } else if (a === '-1') { st[m] = Math.max(0, st[m] - 1); ktrSave(st); draw(); }
+      else if (a === 'reset') {
+        if (!(await confirm({ title: 'Mula semula ' + (m === 'TAWAF' ? 'Tawaf' : 'Sa\'ie') + '?', message: 'Kiraan akan kembali ke 0.', confirmText: 'Mula semula' }))) return;
+        st[m] = 0; ktrSave(st); draw();
+      } else if (a === 'semak') {
+        const hit = KD.api.cacheGet('umrah.semak.list', {});
+        const item = hit && hit.d && hit.d.items ? hit.d.items.filter((i) => i.perkara === SEMAK_DONE[m])[0] : null;
+        if (!item) { toast('Item "' + SEMAK_DONE[m] + '" tiada dalam senarai semak anda.'); return; }
+        if (item.done) { toast('Sudah ditanda dalam senarai semak.'); return; }
+        try {
+          const r = await KD.api.callOrQueue('umrah.semak.toggle', { id: item.id, done: true });
+          KD.api.cachePatch('umrah.semak.list', {}, (d) => { d.items.forEach((i) => { if (i.id === item.id) i.done = true; }); d.done = d.items.filter((i) => i.done).length; return d; });
+          toast(r.queued ? 'Ditanda dalam telefon; akan disegerakkan apabila ada internet.' : 'Ditanda dalam senarai semak.');
+        } catch (err) { toastError(err); }
+      }
+    });
+    draw();
+    keepAwake(true);
+  }
+
+  /* ---- Kad maklumat penting (dalam telefon sahaja) ---- */
+  const kadKey = () => 'kd.kad1.' + uid();
+  const kadLoad = () => { try { return JSON.parse(localStorage.getItem(kadKey()) || 'null'); } catch (e) { return null; } };
+  const KAD_FIELDS = [
+    ['h', 'Diri'], ['nama', 'Nama (seperti pasport)'], ['pasport', 'No. pasport'], ['visa', 'No. visa'], ['agensi', 'Agensi / no. kumpulan'],
+    ['h', 'Mutawwif'], ['mutawwifNama', 'Nama mutawwif'], ['mutawwifTel', 'Telefon mutawwif', 'tel'],
+    ['h', 'Hotel Makkah'], ['makkahNama', 'Nama hotel'], ['makkahArab', 'Nama / alamat dalam tulisan Arab (untuk pemandu)', 'ar'], ['makkahBilik', 'No. bilik'],
+    ['h', 'Hotel Madinah'], ['madinahNama', 'Nama hotel'], ['madinahArab', 'Nama / alamat dalam tulisan Arab (untuk pemandu)', 'ar'], ['madinahBilik', 'No. bilik'],
+    ['h', 'Insurans'], ['insSyarikat', 'Syarikat'], ['insPolisi', 'No. polisi'], ['insTel', 'Talian kecemasan insurans', 'tel'],
+    ['h', 'Kecemasan'], ['kecNama', 'Waris (nama & hubungan)'], ['kecTel', 'Telefon waris', 'tel'], ['perubatan', 'Catatan perubatan (alahan, ubat)', 'text']
+  ];
+  const SOS = [['911', 'Kecemasan'], ['997', 'Ambulans'], ['999', 'Polis'], ['998', 'Pertahanan Awam']];
+
+  function kad(box) {
+    let k = kadLoad();
+    const telLink = (v) => html`<a href="tel:${String(v).replace(/[^0-9+]/g, '')}">${v}</a>`;
+    const row = (lbl, v, type) => (v ? html`<dt>${lbl}</dt><dd>${type === 'tel' ? telLink(v) : v}</dd>` : '');
+    const showAr = (title, nama, ar) => {
+      modal({ title: title, wide: true, body: html`<div class="um-stack" style="text-align:center">${nama ? html`<strong style="font-size:var(--fs-xl)">${nama}</strong>` : ''}<p class="um-big-ar" lang="ar">${ar}</p>
+        <p class="small muted">Tunjukkan skrin ini kepada pemandu teksi.</p></div>`, foot: html`<button class="btn btn-primary" data-close>Tutup</button>` });
+      keepAwake(true);
+    };
+    const draw = () => {
+      if (!k) {
+        box.innerHTML = html`<section class="panel"><div class="um-start"><div><h3>Kad maklumat penting</h3>
+          <p class="muted mt-2">Simpan nombor pasport, hotel (termasuk tulisan Arab untuk pemandu teksi), mutawwif, insurans dan kontak kecemasan dalam satu skrin. Boleh dibuka tanpa internet.</p>
+          <p class="small muted">Disimpan dalam telefon ini sahaja, tidak dihantar ke pelayan.</p></div>
+          <div><button class="btn btn-primary" data-act="kad-edit">${icon('edit')}Isi kad</button></div></div></section>
+          <section class="panel"><h3 style="margin-top:0">Nombor kecemasan Arab Saudi</h3><div class="um-sos mt-3">${SOS.map((s) => html`<a href="tel:${s[0]}"><b>${s[0]}</b><span>${s[1]}</span></a>`)}</div></section>`.s;
+        return;
+      }
+      box.innerHTML = html`<div class="um-stack">
+        <div class="row spread row-wrap"><p class="small muted um-note" style="margin:0">${icon('lock', 'i-sm')} Disimpan dalam telefon ini sahaja · boleh dibuka tanpa internet</p>
+          <button class="btn btn-outline btn-sm" data-act="kad-edit">${icon('edit', 'i-sm')}Sunting</button></div>
+        <div class="um-kad">
+          <section class="panel"><h3>${icon('user', 'i-sm')}Diri</h3><dl class="um-kv">${row('Nama', k.nama)}${row('Pasport', k.pasport)}${row('Visa', k.visa)}${row('Agensi', k.agensi)}</dl></section>
+          <section class="panel"><h3>${icon('users', 'i-sm')}Mutawwif</h3><dl class="um-kv">${row('Nama', k.mutawwifNama)}${row('Telefon', k.mutawwifTel, 'tel')}</dl></section>
+          ${['makkah', 'madinah'].map((c) => html`<section class="panel"><h3>${icon(c === 'makkah' ? 'kaaba' : 'mosque', 'i-sm')}Hotel ${c === 'makkah' ? 'Makkah' : 'Madinah'}</h3>
+            <dl class="um-kv">${row('Hotel', k[c + 'Nama'])}${row('Bilik', k[c + 'Bilik'])}</dl>
+            ${k[c + 'Arab'] ? html`<p class="um-ar mt-3" lang="ar">${k[c + 'Arab']}</p><button class="btn btn-primary btn-sm mt-3" data-ar="${c}">${icon('eye', 'i-sm')}Tunjuk kepada pemandu</button>` : ''}</section>`)}
+          <section class="panel"><h3>${icon('shield', 'i-sm')}Insurans</h3><dl class="um-kv">${row('Syarikat', k.insSyarikat)}${row('No. polisi', k.insPolisi)}${row('Talian', k.insTel, 'tel')}</dl></section>
+          <section class="panel"><h3>${icon('alert', 'i-sm')}Kecemasan</h3><dl class="um-kv">${row('Waris', k.kecNama)}${row('Telefon', k.kecTel, 'tel')}${row('Perubatan', k.perubatan)}</dl></section>
+        </div>
+        <section class="panel"><h3 style="margin-top:0">Nombor kecemasan Arab Saudi</h3><div class="um-sos mt-3">${SOS.map((s) => html`<a href="tel:${s[0]}"><b>${s[0]}</b><span>${s[1]}</span></a>`)}</div></section>
+      </div>`.s;
+    };
+    const edit = () => {
+      const v = k || { nama: (KD.auth.user() || {}).fullName || '' };
+      const m = modal({ title: 'Kad maklumat penting', wide: true, body: html`<form novalidate class="um-form-grid">${KAD_FIELDS.map((f) => (f[0] === 'h' ? html`<h4>${f[1]}</h4>`
+          : html`<div class="field ${f[2] === 'ar' || f[2] === 'text' ? 'span2' : ''}"><label class="label" for="kd-${f[0]}">${f[1]}</label>${f[2] === 'ar' || f[2] === 'text'
+            ? html`<textarea class="textarea" id="kd-${f[0]}" name="${f[0]}" maxlength="300" style="min-height:70px" ${f[2] === 'ar' ? raw('dir="rtl" lang="ar"') : ''}>${v[f[0]] || ''}</textarea>`
+            : html`<input class="input" id="kd-${f[0]}" name="${f[0]}" maxlength="120" ${f[2] === 'tel' ? raw('type="tel" inputmode="tel"') : ''} value="${v[f[0]] || ''}">`}</div>`))}
+          <p class="small muted span2">Salin nama/alamat hotel dalam tulisan Arab daripada surat agensi atau tempahan hotel. Data ini tidak dihantar ke pelayan.</p></form>`,
+        foot: html`${k ? html`<button class="btn btn-ghost" data-act="kad-del" style="margin-right:auto">${icon('trash', 'i-sm')}Padam</button>` : ''}<button class="btn btn-outline" data-close>Batal</button><button class="btn btn-primary" data-act="kad-save">Simpan</button>` });
+      on(m.el, 'click', '[data-act="kad-save"]', () => {
+        const d = formData(qs('form', m.el));
+        Object.keys(d).forEach((x) => { d[x] = String(d[x] || '').trim(); });
+        try { localStorage.setItem(kadKey(), JSON.stringify(d)); k = d; m.close(); draw(); toast('Kad disimpan dalam telefon ini.'); } catch (e) { toast('Gagal menyimpan dalam telefon ini.', 'error'); }
+      });
+      on(m.el, 'click', '[data-act="kad-del"]', async () => {
+        m.close();
+        if (!(await confirm({ title: 'Padam kad?', message: 'Maklumat kad akan dibuang daripada telefon ini.', confirmText: 'Padam', danger: true }))) return;
+        try { localStorage.removeItem(kadKey()); } catch (e) { /* abaikan */ }
+        k = null; draw();
+      });
+    };
+    on(box, 'click', '[data-act="kad-edit"]', edit);
+    on(box, 'click', '[data-ar]', (e, b) => { const c = b.getAttribute('data-ar'); showAr('Hotel ' + (c === 'makkah' ? 'Makkah' : 'Madinah'), k[c + 'Nama'], k[c + 'Arab']); });
+    draw();
+  }
+
+  const RENDER = { semak, kaunter, kad, belanja, jadual, titipan, panduan };
 
   KD.views.umrah = {
     async render(el, params, query) {
