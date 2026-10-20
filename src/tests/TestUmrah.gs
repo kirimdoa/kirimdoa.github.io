@@ -159,6 +159,20 @@ const TestSuiteUmrah = {
         Env.set('PUBLIC_BASE_URL', '');
       }
     }, { nodeOnly: true }],
+    ['Cubaan semula (meta.rid): tindakan tidak berganda; terikat pada token', function (t) {
+      const a = TestHelpers.user('rid');
+      const b = TestHelpers.user('ridb');
+      const rid = 'r' + Utilities.getUuid().replace(/-/g, '');
+      const req = function (tok, perkara) { return api({ action: 'umrah.semak.save', token: tok, payload: { perkara: perkara }, meta: { rid: rid, attempt: 0 } }); };
+      const r1 = TestAssert.apiOk(req(a.token, 'Beli tasbih'));
+      const r2 = TestAssert.apiOk(req(a.token, 'Beli tasbih'));
+      t.eq(r2.id, r1.id, 'jawapan asal dipulangkan');
+      t.eq(TestAssert.apiOk(TestHelpers.call(a.token, 'umrah.semak.list')).total, 1, 'hanya satu rekod');
+      const rb = TestAssert.apiOk(req(b.token, 'Milik B'));
+      t.ok(rb.id !== r1.id, 'rid sama, token lain → dijalankan berasingan');
+      t.eq(rb.perkara, 'Milik B');
+      t.eq(TestAssert.apiOk(api({ action: 'umrah.semak.list', token: a.token, meta: { rid: 'bad id!' } })).total, 1, 'rid tidak sah diabaikan');
+    }],
     ['Senarai semak: tambah, sunting, padam item sendiri; item sendiri di hujung', function (t) {
       const a = TestHelpers.user('semak');
       const d = TestAssert.apiOk(TestHelpers.call(a.token, 'umrah.semak.save', { perkara: '<b>Beli</b> kurma', fasa: 'SEMASA', kumpulan: 'MADINAH' }));
