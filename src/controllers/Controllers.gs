@@ -25,7 +25,11 @@ const AuthController = {
 
 const UserController = {
   updateProfile: function (p, ctx) { return UserService.updateProfile(ctx, p); },
-  dashboard: function (p, ctx) { return DoaService.dashboard(ctx); }
+  dashboard: function (p, ctx) { return DoaService.dashboard(ctx); },
+  /** 1.9.0: halaman Utama dalam SATU panggilan (dahulu 3: dashboard + pautan + ringkasan Umrah). */
+  home: function (p, ctx) {
+    return { dashboard: DoaService.dashboard(ctx), links: RecipientService.listMine(ctx), umrah: UmrahService.ringkasan(ctx) };
+  }
 };
 
 const DoaController = {

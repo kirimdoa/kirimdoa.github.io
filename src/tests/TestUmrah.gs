@@ -173,6 +173,18 @@ const TestSuiteUmrah = {
       t.eq(rb.perkara, 'Milik B');
       t.eq(TestAssert.apiOk(api({ action: 'umrah.semak.list', token: a.token, meta: { rid: 'bad id!' } })).total, 1, 'rid tidak sah diabaikan');
     }],
+    ['Utama dalam satu panggilan (user.home): dashboard + pautan + ringkasan Umrah', function (t) {
+      const a = TestHelpers.user('home');
+      const dep = UmrahService.shiftDate(DateUtils.dayKey(new Date()), 9);
+      TestAssert.apiOk(TestHelpers.call(a.token, 'umrah.semak.seed', { tarikhBerlepas: dep }));
+      TestAssert.apiOk(TestHelpers.call(a.token, 'recipient.create', { displayName: 'Za', title: 'Doakan umrah saya' }));
+      const h = TestAssert.apiOk(TestHelpers.call(a.token, 'user.home'));
+      t.ok(h.dashboard && h.dashboard.stats && Array.isArray(h.dashboard.recent));
+      t.eq(h.links.length, 1);
+      t.eq(h.umrah.total, UmrahService.defaults().length); t.eq(h.umrah.done, 0); t.eq(h.umrah.tarikhBerlepas, dep);
+      t.eq(h.umrah.items, undefined, 'tanpa senarai penuh');
+      TestAssert.apiFail(api({ action: 'user.home', payload: {} }), ERROR_CODES.UNAUTHENTICATED);
+    }],
     ['Senarai semak: tambah, sunting, padam item sendiri; item sendiri di hujung', function (t) {
       const a = TestHelpers.user('semak');
       const d = TestAssert.apiOk(TestHelpers.call(a.token, 'umrah.semak.save', { perkara: '<b>Beli</b> kurma', fasa: 'SEMASA', kumpulan: 'MADINAH' }));

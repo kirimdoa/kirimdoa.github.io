@@ -124,6 +124,17 @@
   }
 
   /* ---- Senarai semak ---- */
+  /** Tindih tanda yang masih dalam baris gilir luar talian (belum sampai ke pelayan). */
+  function withQueued(d) {
+    const q = (KD.api.queueItems ? KD.api.queueItems() : []).filter((x) => x.action === 'umrah.semak.toggle');
+    if (!q.length || !d || !d.items) return d;
+    const copy = Object.assign({}, d, { items: d.items.map((i) => Object.assign({}, i)) });
+    q.forEach((x) => { const it = copy.items.filter((i) => i.id === x.payload.id)[0]; if (it) it.done = !!x.payload.done; });
+    copy.done = copy.items.filter((i) => i.done).length;
+    return copy;
+  }
+  const saveSemakCache = (d) => { if (d && d.items) KD.api.cacheSet('umrah.semak.list', {}, d); };
+
   async function semak(box, query) {
     let data = null;
     let fasa = query.fasa || '';
@@ -169,7 +180,7 @@
       </div>`.s;
     };
     const load = async () => {
-      try { data = await call('umrah.semak.list'); draw(); } catch (err) { box.innerHTML = errorState(err, 'reload').s; }
+      try { await KD.api.swr('umrah.semak.list', {}, (d) => { data = withQueued(d); draw(); }); } catch (err) { box.innerHTML = errorState(err, 'reload').s; }
     };
     const form = (i) => openForm({
       title: i ? 'Sunting item' : 'Tambah item', id: i && i.id, action: 'umrah.semak.save', delAction: 'umrah.semak.delete', done: load,
@@ -196,7 +207,7 @@
       cb.disabled = true;
       try {
         const r = await call('umrah.peringatan.set', { aktif: cb.checked });
-        data.peringatan = r.peringatan;
+        data.peringatan = r.peringatan; saveSemakCache(data);
         toast(r.peringatan ? 'Peringatan harian dihidupkan.' : 'Peringatan harian dimatikan.');
       } catch (err) { cb.checked = !cb.checked; toastError(err); }
       cb.disabled = false;
@@ -234,7 +245,11 @@
         const v = formData(form);
         try {
           const res = await call('umrah.berlepas.set', { tarikhBerlepas: v.tarikhBerlepas, anjakJadual: !!v.anjakJadual });
-          data = res; m.close(); draw();
+          data = res; saveSemakCache(res); m.close(); draw();
+          if (res.jadualDianjak && res.bezaHari) {
+            const shift = (k) => new Date(new Date(k + 'T00:00:00Z').getTime() + res.bezaHari * 86400000).toISOString().slice(0, 10);
+            KD.api.cachePatch('umrah.jadual.list', {}, (j) => ({ items: (j.items || []).map((x) => Object.assign({}, x, { tarikh: x.tarikh ? shift(x.tarikh) : x.tarikh })) }));
+          }
           toast('Tarikh berlepas: ' + fmtDate(res.tarikhBerlepas) + '. ' + res.dianjak + ' tarikh sasaran dikemas kini' + (res.jadualDianjak ? ', ' + res.jadualDianjak + ' aktiviti jadual dianjak.' : '.'));
         } catch (err) { if (!fieldErrors(form, err)) toastError(err); }
       }));
@@ -247,7 +262,7 @@
     on(box, 'click', '[data-act="seed"]', (e, b) => busy(b, async () => {
       try {
         const d = qs('#um-berlepas', box).value;
-        data = await call('umrah.semak.seed', d ? { tarikhBerlepas: d } : {});
+        data = await call('umrah.semak.seed', d ? { tarikhBerlepas: d } : {}); saveSemakCache(data);
         toast(data.total + ' item ditambah.'); fasa = ''; draw();
       } catch (err) { toastError(err); }
     }));
@@ -255,10 +270,13 @@
       const id = cb.getAttribute('data-tick');
       cb.disabled = true;
       try {
-        const res = await call('umrah.semak.toggle', { id, done: cb.checked });
+        const r = await KD.api.callOrQueue('umrah.semak.toggle', { id, done: cb.checked });
         const it = data.items.filter((x) => x.id === id)[0];
-        if (it.done !== res.done) data.done += res.done ? 1 : -1;
-        Object.assign(it, res); draw();
+        const next = r.queued ? cb.checked : r.data.done;
+        if (it.done !== next) data.done += next ? 1 : -1;
+        if (r.queued) { it.done = next; toast('Luar talian: disimpan dalam telefon, akan disegerakkan apabila ada internet.'); }
+        else Object.assign(it, r.data);
+        saveSemakCache(withQueued(data)); draw();
       } catch (err) { cb.checked = !cb.checked; cb.disabled = false; toastError(err); }
     });
     box.innerHTML = skeletonList(4).s;
@@ -287,7 +305,7 @@
           : html`<div class="panel">${empty('Belum ada rekod belanja', 'Catat belanja makan, ole-ole, dam dan sedekah. Jumlah dalam Riyal ditukar ke anggaran RM.')}</div>`}
       </div>`.s;
     };
-    const load = async () => { try { data = await call('umrah.belanja.list'); draw(); } catch (err) { box.innerHTML = errorState(err, 'reload').s; } };
+    const load = async () => { try { await KD.api.swr('umrah.belanja.list', {}, (d) => { data = d; draw(); }); } catch (err) { box.innerHTML = errorState(err, 'reload').s; } };
     const form = (i) => openForm({
       title: i ? 'Sunting belanja' : 'Rekod belanja', id: i && i.id, action: 'umrah.belanja.save', delAction: 'umrah.belanja.delete', done: load,
       body: html`${field('b-perkara', 'Perkara', html`<input class="input" id="b-perkara" name="perkara" maxlength="120" required value="${i ? i.perkara : ''}" placeholder="cth. Kurma Ajwa 1kg">`, true)}
@@ -324,7 +342,7 @@
           : html`<div class="panel">${empty('Belum ada aktiviti', 'Masukkan jadual harian di Makkah dan Madinah.')}</div>`}
       </div>`.s;
     };
-    const load = async () => { try { data = await call('umrah.jadual.list'); draw(); } catch (err) { box.innerHTML = errorState(err, 'reload').s; } };
+    const load = async () => { try { await KD.api.swr('umrah.jadual.list', {}, (d) => { data = d; draw(); }); } catch (err) { box.innerHTML = errorState(err, 'reload').s; } };
     const form = (i) => openForm({
       title: i ? 'Sunting aktiviti' : 'Tambah aktiviti', id: i && i.id, action: 'umrah.jadual.save', delAction: 'umrah.jadual.delete', done: load,
       body: html`${field('j-akt', 'Aktiviti', html`<input class="input" id="j-akt" name="aktiviti" maxlength="120" required value="${i ? i.aktiviti : ''}" placeholder="cth. Ziarah Masjid Quba'">`, true)}
@@ -402,18 +420,21 @@
     }
   };
 
-  /** Kad ringkas di Utama: kemajuan senarai semak. */
+  /** Lukis kad Planner Umrah di Utama daripada ringkasan {total, done, tarikhBerlepas}. */
+  KD.views.umrahDashPaint = function (box, d) {
+    if (!box || !d) return;
+    const pct = d.total ? Math.round((100 * d.done) / d.total) : 0;
+    box.innerHTML = html`<section class="panel um-dash">${icon('kaaba')}
+      <div class="um-dash__body"><strong>Planner Umrah</strong>${d.total
+        ? html`${d.tarikhBerlepas ? html`<div class="um-trip__count">${icon('plane', 'i-sm')} ${fmtDate(d.tarikhBerlepas)} · ${countdown(d.tarikhBerlepas)}</div>` : ''}<div class="small muted">${fmtNum(d.done)} daripada ${fmtNum(d.total)} persiapan siap (${pct}%)</div><div class="um-track"><span style="width:${pct}%"></span></div>`
+        : html`<div class="small muted">Senarai semak, perbelanjaan, jadual dan panduan Umrah.</div>`}</div>
+      <a class="btn btn-outline btn-sm" href="#/umrah">${d.total ? 'Buka' : 'Mula'}</a></section>`.s;
+  };
+
+  /** Kad ringkas di Utama (muat sendiri) — dikekalkan untuk keserasian. */
   KD.views.umrahDashCard = async function (box) {
     if (!box) return;
-    try {
-      const d = await call('umrah.semak.list');
-      const pct = d.total ? Math.round((100 * d.done) / d.total) : 0;
-      box.innerHTML = html`<section class="panel um-dash">${icon('kaaba')}
-        <div class="um-dash__body"><strong>Planner Umrah</strong>${d.total
-          ? html`${d.tarikhBerlepas ? html`<div class="um-trip__count">${icon('plane', 'i-sm')} ${fmtDate(d.tarikhBerlepas)} · ${countdown(d.tarikhBerlepas)}</div>` : ''}<div class="small muted">${fmtNum(d.done)} daripada ${fmtNum(d.total)} persiapan siap (${pct}%)</div><div class="um-track"><span style="width:${pct}%"></span></div>`
-          : html`<div class="small muted">Senarai semak, perbelanjaan, jadual dan panduan Umrah.</div>`}</div>
-        <a class="btn btn-outline btn-sm" href="#/umrah">${d.total ? 'Buka' : 'Mula'}</a></section>`.s;
-    } catch (e) { box.innerHTML = ''; }
+    try { const d = await call('umrah.semak.list'); KD.views.umrahDashPaint(box, d); } catch (e) { box.innerHTML = ''; }
   };
 })(window.KD);
 </script>

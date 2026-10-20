@@ -227,10 +227,9 @@
         </div>`.s;
       if (KD.pwa) KD.pwa.refreshPushUi();
       on(el, 'click', '[data-act="export"]', (e) => { e.preventDefault(); openExport(); });
-      if (KD.views.umrahDashCard) KD.views.umrahDashCard(qs('[data-umrah-card]', el));
-      const load = async () => {
-        try {
-          const [d, links] = await Promise.all([api.getDashboard(), api.getMyLinks()]);
+      const paint = (h) => {
+          const d = h.dashboard, links = h.links;
+          if (KD.views.umrahDashPaint) KD.views.umrahDashPaint(qs('[data-umrah-card]', el), h.umrah);
           KD.app.setUnread(d.unreadNotifications);
           const s = d.stats;
           qs('[data-stats]', el).innerHTML = html`<div class="grid grid-4">
@@ -244,7 +243,9 @@
           const active = links.filter((l) => l.status === 'ACTIVE');
           qs('[data-links]', el).innerHTML = active.length ? html`${active.slice(0, 3).map((l) => html`<div class="health-row"><div class="grow"><div style="font-weight:600;color:var(--maroon-900)">${l.title}</div><div class="xs muted">${fmtNum(l.doaCount)} doa, ${fmtNum(l.unreadCount)} belum dibaca</div></div><button class="icon-btn" data-copy="${l.shareUrl}" aria-label="Salin pautan">${icon('copy')}</button></div>`)}`.s
             : html`<p class="muted small">Bakal ke Tanah Suci? Cipta pautan dan kongsikan kepada keluarga supaya mereka boleh mengirim doa.</p><a class="btn btn-purple btn-block mt-4" href="#/kumpul">${icon('link')}Cipta pautan</a>`.s;
-        } catch (err) {
+      };
+      const load = async () => {
+        try { await api.swr('user.home', {}, paint); } catch (err) {
           qs('[data-stats]', el).innerHTML = errorState(err, 'reload').s;
         }
       };

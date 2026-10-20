@@ -31,6 +31,7 @@ const Router = {
 
       'user.updateProfile': { role: U, fn: UserController.updateProfile },
       'user.dashboard': { role: U, fn: UserController.dashboard },
+      'user.home': { role: U, fn: UserController.home },
 
       'doa.list': { role: U, fn: DoaController.list },
       'doa.get': { role: U, fn: DoaController.get },

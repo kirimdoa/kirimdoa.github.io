@@ -31,7 +31,7 @@
       auth.state.user = user;
       storage.set(SESSION_KEY, JSON.stringify(auth.state), auth.state.remember);
     },
-    clear() { auth.state = null; storage.remove(SESSION_KEY); KD.app.unread = 0; },
+    clear() { auth.state = null; storage.remove(SESSION_KEY); KD.app.unread = 0; if (KD.api && KD.api.cacheClear) KD.api.cacheClear(); },
     expired() {
       if (!auth.loggedIn()) return;
       auth.clear();
@@ -323,12 +323,29 @@
         });
       } catch (e) { /* abaikan */ }
 
-      const tasks = [KD.api.getConfig().then((c) => { KD.config = c; }).catch(() => { KD.config = {}; })];
+      /*
+       * 1.9.0: buka serta-merta. Jika tetapan & profil pernah disimpan pada peranti ini, app dipaparkan terus
+       * dan kedua-duanya disahkan di latar (sesi tamat → pengguna dibawa ke log masuk seperti biasa).
+       */
+      const CFG_KEY = 'kd.cfg1';
+      let cfgCached = null;
+      try { cfgCached = JSON.parse(localStorage.getItem(CFG_KEY) || 'null'); } catch (e) { cfgCached = null; }
+      const fast = !!cfgCached && (!auth.loggedIn() || !!auth.user());
+      if (fast) KD.config = cfgCached;
+      const tasks = [KD.api.getConfig().then((c) => {
+        KD.config = c;
+        try { localStorage.setItem(CFG_KEY, JSON.stringify(c)); } catch (e) { /* abaikan */ }
+      }).catch(() => { if (!KD.config) KD.config = cfgCached || {}; })];
       if (auth.loggedIn()) {
-        tasks.push(KD.api.getCurrentUser().then((me) => { auth.updateUser(me.user); app.unread = me.unreadNotifications; }).catch((e) => { if (e.code === 'UNAUTHENTICATED') auth.clear(); }));
+        tasks.push(KD.api.getCurrentUser().then((me) => {
+          auth.updateUser(me.user); app.unread = me.unreadNotifications;
+          if (fast) { app.setUnread(app.unread); if (KD.pwa) KD.pwa.setBadge(app.unread); }
+        }).catch((e) => { if (e.code === 'UNAUTHENTICATED') auth.clear(); }));
       }
-      await Promise.all(tasks);
-      if (KD.pwa && auth.loggedIn()) KD.pwa.setBadge(app.unread);
+      if (!fast) {
+        await Promise.all(tasks);
+        if (KD.pwa && auth.loggedIn()) KD.pwa.setBadge(app.unread);
+      }
 
       const standalone = !!(KD.pwa && KD.pwa.isWeb() && KD.pwa.isStandalone());
       if (share && !(topHash || location.hash)) history.replaceState(null, '', '#/k/' + share);
@@ -341,6 +358,7 @@
       setTimeout(() => boot.remove(), 450);
       router.start();
       if (KD.pwa) { KD.pwa.init(); KD.pwa.bindPush(document.body); }
+      if (auth.loggedIn() && KD.api.flushQueue) KD.api.flushQueue(); /* hantar tanda senarai semak yang dibuat semasa luar talian */
     },
 
     /** Selepas log masuk: pergi ke laluan yang diminta sebelum ini. */

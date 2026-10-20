@@ -196,6 +196,12 @@ const UmrahService = {
       peringatan: UmrahService.peringatanOn(UmrahService.profil(ctx.userId)) };
   },
 
+  /** Ringkasan untuk kad Utama (tanpa senarai penuh). */
+  ringkasan: function (ctx) {
+    const rows = UmrahService.mine('UMRAH_SEMAK', ctx.userId);
+    return { total: rows.length, done: rows.filter(function (r) { return r.is_done; }).length, tarikhBerlepas: UmrahService.berlepas(ctx.userId) };
+  },
+
   semakSeed: function (ctx, payload) {
     UmrahService.guardWrite(ctx);
     const p = Validator.validate(payload, { tarikhBerlepas: { type: 'date', label: 'Tarikh berlepas' } });

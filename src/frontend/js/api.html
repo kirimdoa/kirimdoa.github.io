@@ -51,8 +51,110 @@
     }
   }
 
+  /*
+   * Cache pelayar (1.9.0): jawapan bacaan disimpan per pengguna dalam localStorage. swr() memaparkan data
+   * tersimpan SERTA-MERTA, kemudian mengemas kini daripada pelayan. Jika luar talian, data tersimpan kekal dipaparkan.
+   * Dipadam apabila log keluar (KD.auth.clear). Tiada token / kata laluan disimpan di sini.
+   */
+  const CACHE_PREFIX = 'kd.c1.';
+  const QUEUE_KEY = 'kd.q1';
+  const userKey = () => { const u = KD.auth && KD.auth.user && KD.auth.user(); return (u && u.id) || 'anon'; };
+  const ckey = (action, payload) => CACHE_PREFIX + userKey() + '.' + action + '.' + JSON.stringify(payload || {});
+  function cacheGet(action, payload) {
+    try { const r = JSON.parse(localStorage.getItem(ckey(action, payload)) || 'null'); return r && r.t ? r : null; } catch (e) { return null; }
+  }
+  function cacheClear() {
+    try {
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && (k.indexOf(CACHE_PREFIX) === 0 || k === QUEUE_KEY)) keys.push(k); }
+      keys.forEach((k) => localStorage.removeItem(k));
+    } catch (e) { /* abaikan */ }
+  }
+  function cacheSet(action, payload, data) {
+    const v = JSON.stringify({ t: Date.now(), d: data });
+    try { localStorage.setItem(ckey(action, payload), v); } catch (e) {
+      try { cacheClear(); localStorage.setItem(ckey(action, payload), v); } catch (e2) { /* storan penuh / mod peribadi */ }
+    }
+  }
+  let offlineToastAt = 0;
+  function noteOffline(at) {
+    if (Date.now() - offlineToastAt < 60000) return;
+    offlineToastAt = Date.now();
+    if (KD.ui && KD.ui.toast) KD.ui.toast('Luar talian: memaparkan data tersimpan' + (at && KD.utils ? ' (' + KD.utils.relTime(new Date(at).toISOString()) + ')' : '') + '.');
+  }
+
+  /**
+   * Papar data tersimpan dahulu, kemudian data terkini. render(data, {stale, offline}) mungkin dipanggil dua kali.
+   * @return {Promise<*>} data terkini (atau tersimpan jika luar talian)
+   */
+  async function swr(action, payload, render) {
+    const hit = cacheGet(action, payload);
+    if (hit) { try { render(hit.d, { stale: true }); } catch (e) { console.error(e); } }
+    try {
+      const d = await call(action, payload);
+      cacheSet(action, payload, d);
+      if (!hit || JSON.stringify(hit.d) !== JSON.stringify(d)) render(d, { stale: false });
+      return d;
+    } catch (err) {
+      if (hit && err.code === 'NETWORK') { noteOffline(hit.t); return hit.d; }
+      throw err;
+    }
+  }
+
+  /** Kemas kini cache selepas perubahan setempat (cth. tanda senarai semak) supaya paparan seterusnya tepat. */
+  function cachePatch(action, payload, fn) {
+    const hit = cacheGet(action, payload);
+    if (!hit) return;
+    try { const d = fn(hit.d); if (d !== undefined) cacheSet(action, payload, d); } catch (e) { /* abaikan */ }
+  }
+
+  /* Baris gilir tulisan luar talian (hanya tindakan idempoten: tanda senarai semak). Dihantar apabila kembali dalam talian. */
+  const QUEUEABLE = ['umrah.semak.toggle'];
+  function queueGet() { try { return JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]'); } catch (e) { return []; } }
+  function queueSave(q) { try { if (q.length) localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); else localStorage.removeItem(QUEUE_KEY); } catch (e) { /* abaikan */ } }
+  /** Seperti call(), tetapi jika luar talian tindakan disimpan dan dihantar kemudian. @return {{queued:boolean, data:*}} */
+  async function callOrQueue(action, payload) {
+    try { return { queued: false, data: await call(action, payload) }; } catch (err) {
+      if (err.code !== 'NETWORK' || QUEUEABLE.indexOf(action) < 0) throw err;
+      const q = queueGet().filter((x) => !(x.action === action && x.payload && payload && x.payload.id === payload.id));
+      q.push({ action, payload, user: userKey(), t: Date.now() });
+      queueSave(q);
+      return { queued: true, data: null };
+    }
+  }
+  let flushing = false;
+  async function flushQueue() {
+    if (flushing || !(KD.auth && KD.auth.loggedIn && KD.auth.loggedIn())) return 0;
+    flushing = true;
+    let sent = 0;
+    try {
+      let q = queueGet();
+      while (q.length) {
+        const item = q[0];
+        if (item.user !== userKey()) { q.shift(); continue; }
+        try { await call(item.action, item.payload); sent++; q.shift(); } catch (err) { if (err.code === 'NETWORK') break; q.shift(); }
+        queueSave(q);
+      }
+      queueSave(q);
+    } finally { flushing = false; }
+    if (sent && KD.ui) KD.ui.toast(sent + ' perubahan luar talian telah disegerakkan.');
+    return sent;
+  }
+  const queueSize = () => queueGet().length;
+  window.addEventListener('online', () => { flushQueue(); });
+
   KD.api = {
     call,
+    swr,
+    cacheGet,
+    cacheSet,
+    cachePatch,
+    cacheClear,
+    callOrQueue,
+    flushQueue,
+    queueSize,
+    queueItems: () => queueGet(),
+    getHome: () => call('user.home'),
     ApiError,
     // Awam
     getConfig: () => call('public.config'),

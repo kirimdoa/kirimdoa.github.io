@@ -52,8 +52,11 @@ self.addEventListener('fetch', function (e) {
   var req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return; // jangan sentuh permintaan Google
   if (req.mode === 'navigate') {
-    // Rangkaian dahulu (sentiasa versi terkini); jika luar talian → halaman offline
-    e.respondWith(fetch(req).catch(function () { return caches.match('offline.html'); }));
+    // Rangkaian dahulu (sentiasa versi terkini); jika luar talian → app tersimpan (data terakhir dipaparkan daripada cache pelayar),
+    // atau halaman offline jika app belum pernah disimpan
+    e.respondWith(fetch(req).catch(function () {
+      return caches.match('index.html').then(function (r) { return r || caches.match('./'); }).then(function (r) { return r || caches.match('offline.html'); });
+    }));
     return;
   }
   // Aset statik: cache dahulu, kemas kini di latar

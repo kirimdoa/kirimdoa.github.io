@@ -9,7 +9,7 @@
 const CONFIG = Object.freeze({
   APP_NAME: 'Kirim Doa',
   TAGLINE: 'Doa anda, cahaya hati',
-  VERSION: '1.8.2',
+  VERSION: '1.9.0',
   TIMEZONE_FALLBACK: 'Asia/Kuala_Lumpur',
 
   DEFAULT_PAGE_SIZE: 20,
