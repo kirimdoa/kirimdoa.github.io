@@ -273,8 +273,110 @@ window.KD = window.KD || {};
     }
   }
 
+  /*
+   * Cache pelayar (1.9.0): jawapan bacaan disimpan per pengguna dalam localStorage. swr() memaparkan data
+   * tersimpan SERTA-MERTA, kemudian mengemas kini daripada pelayan. Jika luar talian, data tersimpan kekal dipaparkan.
+   * Dipadam apabila log keluar (KD.auth.clear). Tiada token / kata laluan disimpan di sini.
+   */
+  const CACHE_PREFIX = 'kd.c1.';
+  const QUEUE_KEY = 'kd.q1';
+  const userKey = () => { const u = KD.auth && KD.auth.user && KD.auth.user(); return (u && u.id) || 'anon'; };
+  const ckey = (action, payload) => CACHE_PREFIX + userKey() + '.' + action + '.' + JSON.stringify(payload || {});
+  function cacheGet(action, payload) {
+    try { const r = JSON.parse(localStorage.getItem(ckey(action, payload)) || 'null'); return r && r.t ? r : null; } catch (e) { return null; }
+  }
+  function cacheClear() {
+    try {
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && (k.indexOf(CACHE_PREFIX) === 0 || k === QUEUE_KEY)) keys.push(k); }
+      keys.forEach((k) => localStorage.removeItem(k));
+    } catch (e) { /* abaikan */ }
+  }
+  function cacheSet(action, payload, data) {
+    const v = JSON.stringify({ t: Date.now(), d: data });
+    try { localStorage.setItem(ckey(action, payload), v); } catch (e) {
+      try { cacheClear(); localStorage.setItem(ckey(action, payload), v); } catch (e2) { /* storan penuh / mod peribadi */ }
+    }
+  }
+  let offlineToastAt = 0;
+  function noteOffline(at) {
+    if (Date.now() - offlineToastAt < 60000) return;
+    offlineToastAt = Date.now();
+    if (KD.ui && KD.ui.toast) KD.ui.toast('Luar talian: memaparkan data tersimpan' + (at && KD.utils ? ' (' + KD.utils.relTime(new Date(at).toISOString()) + ')' : '') + '.');
+  }
+
+  /**
+   * Papar data tersimpan dahulu, kemudian data terkini. render(data, {stale, offline}) mungkin dipanggil dua kali.
+   * @return {Promise<*>} data terkini (atau tersimpan jika luar talian)
+   */
+  async function swr(action, payload, render) {
+    const hit = cacheGet(action, payload);
+    if (hit) { try { render(hit.d, { stale: true }); } catch (e) { console.error(e); } }
+    try {
+      const d = await call(action, payload);
+      cacheSet(action, payload, d);
+      if (!hit || JSON.stringify(hit.d) !== JSON.stringify(d)) render(d, { stale: false });
+      return d;
+    } catch (err) {
+      if (hit && err.code === 'NETWORK') { noteOffline(hit.t); return hit.d; }
+      throw err;
+    }
+  }
+
+  /** Kemas kini cache selepas perubahan setempat (cth. tanda senarai semak) supaya paparan seterusnya tepat. */
+  function cachePatch(action, payload, fn) {
+    const hit = cacheGet(action, payload);
+    if (!hit) return;
+    try { const d = fn(hit.d); if (d !== undefined) cacheSet(action, payload, d); } catch (e) { /* abaikan */ }
+  }
+
+  /* Baris gilir tulisan luar talian (hanya tindakan idempoten: tanda senarai semak). Dihantar apabila kembali dalam talian. */
+  const QUEUEABLE = ['umrah.semak.toggle'];
+  function queueGet() { try { return JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]'); } catch (e) { return []; } }
+  function queueSave(q) { try { if (q.length) localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); else localStorage.removeItem(QUEUE_KEY); } catch (e) { /* abaikan */ } }
+  /** Seperti call(), tetapi jika luar talian tindakan disimpan dan dihantar kemudian. @return {{queued:boolean, data:*}} */
+  async function callOrQueue(action, payload) {
+    try { return { queued: false, data: await call(action, payload) }; } catch (err) {
+      if (err.code !== 'NETWORK' || QUEUEABLE.indexOf(action) < 0) throw err;
+      const q = queueGet().filter((x) => !(x.action === action && x.payload && payload && x.payload.id === payload.id));
+      q.push({ action, payload, user: userKey(), t: Date.now() });
+      queueSave(q);
+      return { queued: true, data: null };
+    }
+  }
+  let flushing = false;
+  async function flushQueue() {
+    if (flushing || !(KD.auth && KD.auth.loggedIn && KD.auth.loggedIn())) return 0;
+    flushing = true;
+    let sent = 0;
+    try {
+      let q = queueGet();
+      while (q.length) {
+        const item = q[0];
+        if (item.user !== userKey()) { q.shift(); continue; }
+        try { await call(item.action, item.payload); sent++; q.shift(); } catch (err) { if (err.code === 'NETWORK') break; q.shift(); }
+        queueSave(q);
+      }
+      queueSave(q);
+    } finally { flushing = false; }
+    if (sent && KD.ui) KD.ui.toast(sent + ' perubahan luar talian telah disegerakkan.');
+    return sent;
+  }
+  const queueSize = () => queueGet().length;
+  window.addEventListener('online', () => { flushQueue(); });
+
   KD.api = {
     call,
+    swr,
+    cacheGet,
+    cacheSet,
+    cachePatch,
+    cacheClear,
+    callOrQueue,
+    flushQueue,
+    queueSize,
+    queueItems: () => queueGet(),
+    getHome: () => call('user.home'),
     ApiError,
     // Awam
     getConfig: () => call('public.config'),
@@ -948,7 +1050,7 @@ window.KD = window.KD || {};
       auth.state.user = user;
       storage.set(SESSION_KEY, JSON.stringify(auth.state), auth.state.remember);
     },
-    clear() { auth.state = null; storage.remove(SESSION_KEY); KD.app.unread = 0; },
+    clear() { auth.state = null; storage.remove(SESSION_KEY); KD.app.unread = 0; if (KD.api && KD.api.cacheClear) KD.api.cacheClear(); },
     expired() {
       if (!auth.loggedIn()) return;
       auth.clear();
@@ -1240,12 +1342,29 @@ window.KD = window.KD || {};
         });
       } catch (e) { /* abaikan */ }
 
-      const tasks = [KD.api.getConfig().then((c) => { KD.config = c; }).catch(() => { KD.config = {}; })];
+      /*
+       * 1.9.0: buka serta-merta. Jika tetapan & profil pernah disimpan pada peranti ini, app dipaparkan terus
+       * dan kedua-duanya disahkan di latar (sesi tamat → pengguna dibawa ke log masuk seperti biasa).
+       */
+      const CFG_KEY = 'kd.cfg1';
+      let cfgCached = null;
+      try { cfgCached = JSON.parse(localStorage.getItem(CFG_KEY) || 'null'); } catch (e) { cfgCached = null; }
+      const fast = !!cfgCached && (!auth.loggedIn() || !!auth.user());
+      if (fast) KD.config = cfgCached;
+      const tasks = [KD.api.getConfig().then((c) => {
+        KD.config = c;
+        try { localStorage.setItem(CFG_KEY, JSON.stringify(c)); } catch (e) { /* abaikan */ }
+      }).catch(() => { if (!KD.config) KD.config = cfgCached || {}; })];
       if (auth.loggedIn()) {
-        tasks.push(KD.api.getCurrentUser().then((me) => { auth.updateUser(me.user); app.unread = me.unreadNotifications; }).catch((e) => { if (e.code === 'UNAUTHENTICATED') auth.clear(); }));
+        tasks.push(KD.api.getCurrentUser().then((me) => {
+          auth.updateUser(me.user); app.unread = me.unreadNotifications;
+          if (fast) { app.setUnread(app.unread); if (KD.pwa) KD.pwa.setBadge(app.unread); }
+        }).catch((e) => { if (e.code === 'UNAUTHENTICATED') auth.clear(); }));
       }
-      await Promise.all(tasks);
-      if (KD.pwa && auth.loggedIn()) KD.pwa.setBadge(app.unread);
+      if (!fast) {
+        await Promise.all(tasks);
+        if (KD.pwa && auth.loggedIn()) KD.pwa.setBadge(app.unread);
+      }
 
       const standalone = !!(KD.pwa && KD.pwa.isWeb() && KD.pwa.isStandalone());
       if (share && !(topHash || location.hash)) history.replaceState(null, '', '#/k/' + share);
@@ -1258,6 +1377,7 @@ window.KD = window.KD || {};
       setTimeout(() => boot.remove(), 450);
       router.start();
       if (KD.pwa) { KD.pwa.init(); KD.pwa.bindPush(document.body); }
+      if (auth.loggedIn() && KD.api.flushQueue) KD.api.flushQueue(); /* hantar tanda senarai semak yang dibuat semasa luar talian */
     },
 
     /** Selepas log masuk: pergi ke laluan yang diminta sebelum ini. */
@@ -1803,10 +1923,9 @@ window.KD = window.KD || {};
         </div>`.s;
       if (KD.pwa) KD.pwa.refreshPushUi();
       on(el, 'click', '[data-act="export"]', (e) => { e.preventDefault(); openExport(); });
-      if (KD.views.umrahDashCard) KD.views.umrahDashCard(qs('[data-umrah-card]', el));
-      const load = async () => {
-        try {
-          const [d, links] = await Promise.all([api.getDashboard(), api.getMyLinks()]);
+      const paint = (h) => {
+          const d = h.dashboard, links = h.links;
+          if (KD.views.umrahDashPaint) KD.views.umrahDashPaint(qs('[data-umrah-card]', el), h.umrah);
           KD.app.setUnread(d.unreadNotifications);
           const s = d.stats;
           qs('[data-stats]', el).innerHTML = html`<div class="grid grid-4">
@@ -1820,7 +1939,9 @@ window.KD = window.KD || {};
           const active = links.filter((l) => l.status === 'ACTIVE');
           qs('[data-links]', el).innerHTML = active.length ? html`${active.slice(0, 3).map((l) => html`<div class="health-row"><div class="grow"><div style="font-weight:600;color:var(--maroon-900)">${l.title}</div><div class="xs muted">${fmtNum(l.doaCount)} doa, ${fmtNum(l.unreadCount)} belum dibaca</div></div><button class="icon-btn" data-copy="${l.shareUrl}" aria-label="Salin pautan">${icon('copy')}</button></div>`)}`.s
             : html`<p class="muted small">Bakal ke Tanah Suci? Cipta pautan dan kongsikan kepada keluarga supaya mereka boleh mengirim doa.</p><a class="btn btn-purple btn-block mt-4" href="#/kumpul">${icon('link')}Cipta pautan</a>`.s;
-        } catch (err) {
+      };
+      const load = async () => {
+        try { await api.swr('user.home', {}, paint); } catch (err) {
           qs('[data-stats]', el).innerHTML = errorState(err, 'reload').s;
         }
       };
@@ -2296,6 +2417,17 @@ window.KD = window.KD || {};
   }
 
   /* ---- Senarai semak ---- */
+  /** Tindih tanda yang masih dalam baris gilir luar talian (belum sampai ke pelayan). */
+  function withQueued(d) {
+    const q = (KD.api.queueItems ? KD.api.queueItems() : []).filter((x) => x.action === 'umrah.semak.toggle');
+    if (!q.length || !d || !d.items) return d;
+    const copy = Object.assign({}, d, { items: d.items.map((i) => Object.assign({}, i)) });
+    q.forEach((x) => { const it = copy.items.filter((i) => i.id === x.payload.id)[0]; if (it) it.done = !!x.payload.done; });
+    copy.done = copy.items.filter((i) => i.done).length;
+    return copy;
+  }
+  const saveSemakCache = (d) => { if (d && d.items) KD.api.cacheSet('umrah.semak.list', {}, d); };
+
   async function semak(box, query) {
     let data = null;
     let fasa = query.fasa || '';
@@ -2341,7 +2473,7 @@ window.KD = window.KD || {};
       </div>`.s;
     };
     const load = async () => {
-      try { data = await call('umrah.semak.list'); draw(); } catch (err) { box.innerHTML = errorState(err, 'reload').s; }
+      try { await KD.api.swr('umrah.semak.list', {}, (d) => { data = withQueued(d); draw(); }); } catch (err) { box.innerHTML = errorState(err, 'reload').s; }
     };
     const form = (i) => openForm({
       title: i ? 'Sunting item' : 'Tambah item', id: i && i.id, action: 'umrah.semak.save', delAction: 'umrah.semak.delete', done: load,
@@ -2368,7 +2500,7 @@ window.KD = window.KD || {};
       cb.disabled = true;
       try {
         const r = await call('umrah.peringatan.set', { aktif: cb.checked });
-        data.peringatan = r.peringatan;
+        data.peringatan = r.peringatan; saveSemakCache(data);
         toast(r.peringatan ? 'Peringatan harian dihidupkan.' : 'Peringatan harian dimatikan.');
       } catch (err) { cb.checked = !cb.checked; toastError(err); }
       cb.disabled = false;
@@ -2406,7 +2538,11 @@ window.KD = window.KD || {};
         const v = formData(form);
         try {
           const res = await call('umrah.berlepas.set', { tarikhBerlepas: v.tarikhBerlepas, anjakJadual: !!v.anjakJadual });
-          data = res; m.close(); draw();
+          data = res; saveSemakCache(res); m.close(); draw();
+          if (res.jadualDianjak && res.bezaHari) {
+            const shift = (k) => new Date(new Date(k + 'T00:00:00Z').getTime() + res.bezaHari * 86400000).toISOString().slice(0, 10);
+            KD.api.cachePatch('umrah.jadual.list', {}, (j) => ({ items: (j.items || []).map((x) => Object.assign({}, x, { tarikh: x.tarikh ? shift(x.tarikh) : x.tarikh })) }));
+          }
           toast('Tarikh berlepas: ' + fmtDate(res.tarikhBerlepas) + '. ' + res.dianjak + ' tarikh sasaran dikemas kini' + (res.jadualDianjak ? ', ' + res.jadualDianjak + ' aktiviti jadual dianjak.' : '.'));
         } catch (err) { if (!fieldErrors(form, err)) toastError(err); }
       }));
@@ -2419,7 +2555,7 @@ window.KD = window.KD || {};
     on(box, 'click', '[data-act="seed"]', (e, b) => busy(b, async () => {
       try {
         const d = qs('#um-berlepas', box).value;
-        data = await call('umrah.semak.seed', d ? { tarikhBerlepas: d } : {});
+        data = await call('umrah.semak.seed', d ? { tarikhBerlepas: d } : {}); saveSemakCache(data);
         toast(data.total + ' item ditambah.'); fasa = ''; draw();
       } catch (err) { toastError(err); }
     }));
@@ -2427,10 +2563,13 @@ window.KD = window.KD || {};
       const id = cb.getAttribute('data-tick');
       cb.disabled = true;
       try {
-        const res = await call('umrah.semak.toggle', { id, done: cb.checked });
+        const r = await KD.api.callOrQueue('umrah.semak.toggle', { id, done: cb.checked });
         const it = data.items.filter((x) => x.id === id)[0];
-        if (it.done !== res.done) data.done += res.done ? 1 : -1;
-        Object.assign(it, res); draw();
+        const next = r.queued ? cb.checked : r.data.done;
+        if (it.done !== next) data.done += next ? 1 : -1;
+        if (r.queued) { it.done = next; toast('Luar talian: disimpan dalam telefon, akan disegerakkan apabila ada internet.'); }
+        else Object.assign(it, r.data);
+        saveSemakCache(withQueued(data)); draw();
       } catch (err) { cb.checked = !cb.checked; cb.disabled = false; toastError(err); }
     });
     box.innerHTML = skeletonList(4).s;
@@ -2459,7 +2598,7 @@ window.KD = window.KD || {};
           : html`<div class="panel">${empty('Belum ada rekod belanja', 'Catat belanja makan, ole-ole, dam dan sedekah. Jumlah dalam Riyal ditukar ke anggaran RM.')}</div>`}
       </div>`.s;
     };
-    const load = async () => { try { data = await call('umrah.belanja.list'); draw(); } catch (err) { box.innerHTML = errorState(err, 'reload').s; } };
+    const load = async () => { try { await KD.api.swr('umrah.belanja.list', {}, (d) => { data = d; draw(); }); } catch (err) { box.innerHTML = errorState(err, 'reload').s; } };
     const form = (i) => openForm({
       title: i ? 'Sunting belanja' : 'Rekod belanja', id: i && i.id, action: 'umrah.belanja.save', delAction: 'umrah.belanja.delete', done: load,
       body: html`${field('b-perkara', 'Perkara', html`<input class="input" id="b-perkara" name="perkara" maxlength="120" required value="${i ? i.perkara : ''}" placeholder="cth. Kurma Ajwa 1kg">`, true)}
@@ -2496,7 +2635,7 @@ window.KD = window.KD || {};
           : html`<div class="panel">${empty('Belum ada aktiviti', 'Masukkan jadual harian di Makkah dan Madinah.')}</div>`}
       </div>`.s;
     };
-    const load = async () => { try { data = await call('umrah.jadual.list'); draw(); } catch (err) { box.innerHTML = errorState(err, 'reload').s; } };
+    const load = async () => { try { await KD.api.swr('umrah.jadual.list', {}, (d) => { data = d; draw(); }); } catch (err) { box.innerHTML = errorState(err, 'reload').s; } };
     const form = (i) => openForm({
       title: i ? 'Sunting aktiviti' : 'Tambah aktiviti', id: i && i.id, action: 'umrah.jadual.save', delAction: 'umrah.jadual.delete', done: load,
       body: html`${field('j-akt', 'Aktiviti', html`<input class="input" id="j-akt" name="aktiviti" maxlength="120" required value="${i ? i.aktiviti : ''}" placeholder="cth. Ziarah Masjid Quba'">`, true)}
@@ -2574,18 +2713,21 @@ window.KD = window.KD || {};
     }
   };
 
-  /** Kad ringkas di Utama: kemajuan senarai semak. */
+  /** Lukis kad Planner Umrah di Utama daripada ringkasan {total, done, tarikhBerlepas}. */
+  KD.views.umrahDashPaint = function (box, d) {
+    if (!box || !d) return;
+    const pct = d.total ? Math.round((100 * d.done) / d.total) : 0;
+    box.innerHTML = html`<section class="panel um-dash">${icon('kaaba')}
+      <div class="um-dash__body"><strong>Planner Umrah</strong>${d.total
+        ? html`${d.tarikhBerlepas ? html`<div class="um-trip__count">${icon('plane', 'i-sm')} ${fmtDate(d.tarikhBerlepas)} · ${countdown(d.tarikhBerlepas)}</div>` : ''}<div class="small muted">${fmtNum(d.done)} daripada ${fmtNum(d.total)} persiapan siap (${pct}%)</div><div class="um-track"><span style="width:${pct}%"></span></div>`
+        : html`<div class="small muted">Senarai semak, perbelanjaan, jadual dan panduan Umrah.</div>`}</div>
+      <a class="btn btn-outline btn-sm" href="#/umrah">${d.total ? 'Buka' : 'Mula'}</a></section>`.s;
+  };
+
+  /** Kad ringkas di Utama (muat sendiri) — dikekalkan untuk keserasian. */
   KD.views.umrahDashCard = async function (box) {
     if (!box) return;
-    try {
-      const d = await call('umrah.semak.list');
-      const pct = d.total ? Math.round((100 * d.done) / d.total) : 0;
-      box.innerHTML = html`<section class="panel um-dash">${icon('kaaba')}
-        <div class="um-dash__body"><strong>Planner Umrah</strong>${d.total
-          ? html`${d.tarikhBerlepas ? html`<div class="um-trip__count">${icon('plane', 'i-sm')} ${fmtDate(d.tarikhBerlepas)} · ${countdown(d.tarikhBerlepas)}</div>` : ''}<div class="small muted">${fmtNum(d.done)} daripada ${fmtNum(d.total)} persiapan siap (${pct}%)</div><div class="um-track"><span style="width:${pct}%"></span></div>`
-          : html`<div class="small muted">Senarai semak, perbelanjaan, jadual dan panduan Umrah.</div>`}</div>
-        <a class="btn btn-outline btn-sm" href="#/umrah">${d.total ? 'Buka' : 'Mula'}</a></section>`.s;
-    } catch (e) { box.innerHTML = ''; }
+    try { const d = await call('umrah.semak.list'); KD.views.umrahDashPaint(box, d); } catch (e) { box.innerHTML = ''; }
   };
 })(window.KD);
 /* ---- bahagian 10 ---- */

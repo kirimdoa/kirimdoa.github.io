@@ -1,8 +1,8 @@
 /* Kirim Doa — service worker: cache aset statik sahaja.
  * Data doa TIDAK dicache (peribadi & sentiasa daripada pelayan; permintaan API ke Google tidak disentuh).
  * Nama cache & senarai aset diisi oleh tools/build-web.js (pemegang tempat di bawah). */
-var CACHE = "kirimdoa-1.8.2-33a2a2873c";
-var ASSETS = ["./","index.html","config.js","assets/app.85edc4401d.js","assets/app.2f492483b3.css","offline.html","manifest.webmanifest","icons/apple-touch-icon.png","icons/badge-72.png","icons/favicon-32.png","icons/icon-192.png","icons/icon-512.png","icons/maskable-512.png","icons/shortcut-book.png","icons/shortcut-link.png","icons/shortcut-send.png"];
+var CACHE = "kirimdoa-1.9.0-a71b5926cc";
+var ASSETS = ["./","index.html","config.js","assets/app.93428727b8.js","assets/app.2f492483b3.css","offline.html","manifest.webmanifest","icons/apple-touch-icon.png","icons/badge-72.png","icons/favicon-32.png","icons/icon-192.png","icons/icon-512.png","icons/maskable-512.png","icons/shortcut-book.png","icons/shortcut-link.png","icons/shortcut-send.png"];
 var FIREBASE_SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
 
 // Lencana pada ikon app (nombor belum dibaca) — didaftar SEBELUM Firebase supaya sentiasa berjalan.
