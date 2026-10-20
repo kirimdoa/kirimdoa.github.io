@@ -1,0 +1,36 @@
+# Diagnostik sementara: uji API Web App dari GitHub dan simpan hasil ke branch diag.
+name: Diag API
+on:
+  push:
+    branches: [diag]
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Uji
+        run: |
+          URL="https://script.google.com/macros/s/AKfycbxVQdBEj62srAflj1xiIUgtA3blxlo4U-OSlQRhtNKqqN_qr3_HXggHX5gKMgAB_i8n/exec"
+          probe() {
+            echo "=== $1"
+            curl -sS -L -m 60 -o body.txt -w "http=%{http_code} time=%{time_total}s url=%{url_effective}\n" -H 'Content-Type: text/plain;charset=utf-8' -d "$2" "$URL" 2>&1 || true
+            head -c 600 body.txt; echo; echo
+          }
+          {
+            date -u
+            probe "public.config" '{"action":"public.config","payload":{}}'
+            probe "public.config+rid" '{"action":"public.config","payload":{},"meta":{"rid":"rdiag0123456789abcdef","attempt":0}}'
+            probe "public.config+rid ulang" '{"action":"public.config","payload":{},"meta":{"rid":"rdiag0123456789abcdef","attempt":1}}'
+            probe "umrah.semak.list tanpa token" '{"action":"umrah.semak.list","payload":{}}'
+            probe "public.categories" '{"action":"public.categories","payload":{}}'
+            echo "=== GET"
+            curl -sS -L -m 60 -o get.txt -w "http=%{http_code}\n" "$URL" || true
+            grep -o '<title>[^<]*' get.txt | head -1
+          } > diag-result.txt 2>&1
+          cat diag-result.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add diag-result.txt && git commit -q -m "diag result" && git push -q origin HEAD:diag
