@@ -736,7 +736,7 @@ p { margin: 0; }
 .um-list { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: var(--sp-1); }
 .um-start { display: flex; flex-direction: column; gap: var(--sp-4); max-width: 560px; }
 .um-start .row { align-items: flex-end; }
-.um-titipan { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-3); }
+.um-titipan { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3); }
 .um-titipan a { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-4); border-radius: var(--r-md); border: 1px solid var(--line); background: var(--white); text-decoration: none; color: var(--maroon-900); font-weight: 600; }
 .um-titipan a:hover { border-color: var(--maroon); }
 .um-titipan a .i { width: 26px; height: 26px; color: var(--purple); }
@@ -757,6 +757,23 @@ p { margin: 0; }
 .um-ktr .row { justify-content: center; }
 .um-doa { text-align: left; width: 100%; display: flex; flex-direction: column; gap: var(--sp-2); }
 .um-doa .um-ar { font-size: 1.35rem; }
+/* Koleksi doa */
+.um-doa-tools { display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: center; }
+.um-doa-tools .input { flex: 1 1 220px; min-width: 0; }
+.um-chips { display: flex; gap: var(--sp-2); overflow-x: auto; padding-bottom: 2px; }
+.um-chips button { flex: 0 0 auto; padding: 6px 12px; border-radius: var(--r-pill); border: 1px solid var(--line); background: var(--white); color: var(--muted); font-size: var(--fs-sm); font-weight: 500; cursor: pointer; }
+.um-chips button[aria-pressed="true"] { background: var(--maroon); border-color: var(--maroon); color: #fff; }
+.um-chips .i { display: inline-block; vertical-align: -2px; width: 14px; height: 14px; }
+.um-dcard { display: flex; flex-direction: column; gap: var(--sp-3); }
+.um-dcard__head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--sp-3); }
+.um-dcard__head h3 { margin: 0; font-size: var(--fs-md); font-family: var(--font-ui); font-weight: 700; color: var(--maroon-900); }
+.um-dcard__no { color: var(--gold); font-variant-numeric: tabular-nums; margin-right: 6px; }
+.um-dcard__when { font-size: var(--fs-sm); color: var(--purple); }
+.um-dcard .um-ar { font-size: calc(1.45rem * var(--um-fs, 1)); }
+.um-dcard .um-rumi { font-size: calc(var(--fs-sm) * var(--um-fs, 1)); }
+.um-dcard__makna { margin: 0; font-size: calc(var(--fs-md) * var(--um-fs, 1)); }
+.um-dcard__foot { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.um-star[aria-pressed="true"] .i { fill: var(--gold); color: var(--gold); }
 /* Kad penting */
 .um-kad { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-4); }
 .um-kad section { min-width: 0; }
