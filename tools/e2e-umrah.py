@@ -56,6 +56,12 @@ with sync_playwright() as p:
     pg.click('[data-ktr="semak"]'); pg.wait_for_selector('text=Ditanda dalam senarai semak'); step('Tawaf selesai → ditanda dalam senarai semak')
     pg.click('[data-ktr-mode=SAIE]'); assert pg.inner_text('.um-ktr__dir') == 'Safa → Marwah'
     pg.click('[data-ktr="+1"]'); assert pg.inner_text('.um-ktr__dir') == 'Marwah → Safa'; step("Sa'ie: arah Safa/Marwah bertukar")
+    pg.click('[data-tab=doa]'); pg.wait_for_selector('.um-dcard')
+    assert pg.locator('.um-dcard').count() == 30; step('koleksi 30 doa dipaparkan')
+    pg.fill('[data-doa-q]', 'ibu bapa'); pg.wait_for_timeout(200); assert 'Doa untuk kedua ibu bapa' in pg.inner_text('[data-doa-list]'); step('carian doa')
+    pg.fill('[data-doa-q]', ''); pg.click('[data-kat=TAWAF]'); pg.wait_for_timeout(200); assert pg.locator('.um-dcard').count() == 6; step('tapis kategori Tawaf/Sa\'ie/Zamzam')
+    pg.click('#doa-11 [data-fav]'); pg.click('[data-kat=FAV]'); pg.wait_for_timeout(200); assert pg.locator('.um-dcard').count() == 1; step('kegemaran doa')
+    pg.click('[data-kat=""]'); pg.click('[data-fs="1"]'); no_hscroll(pg, 'koleksi doa'); pg.screenshot(path='e2e-shots/kd-doa.png')
     pg.click('[data-tab=kad]'); pg.wait_for_selector('[data-act=kad-edit]'); pg.click('[data-act=kad-edit]'); pg.wait_for_selector('#kd-pasport'); pg.wait_for_timeout(200)
     pg.fill('#kd-pasport', 'A12345678'); pg.fill('#kd-mutawwifTel', '+966 50 123 4567'); pg.fill('#kd-makkahNama', 'Hotel Contoh Makkah')
     pg.fill('#kd-makkahArab', 'فندق مكة'); pg.click('[data-act=kad-save]'); pg.wait_for_selector('text=A12345678')
