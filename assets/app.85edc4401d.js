@@ -257,7 +257,7 @@ window.KD = window.KD || {};
         .withFailureHandler((e) => {
           console.error('[api]', action, 'cubaan ' + (attempt + 1), e);
           const detail = String((e && e.message) || e || '').slice(0, 60);
-          reject(new ApiError('Sambungan ke pelayan gagal. Semak internet anda dan cuba semula.', 'NETWORK', { detail: detail }));
+          reject(new ApiError('Sambungan ke pelayan gagal. Semak internet anda dan cuba semula.' + (detail ? ' (' + detail + ')' : ''), 'NETWORK', { detail: detail }));
         })
         .api({ action: action, payload: payload || {}, token: KD.auth ? KD.auth.token() : '', meta: { userAgent: navigator.userAgent, rid: rid, attempt: attempt || 0 } });
     });
