@@ -41,7 +41,8 @@ const NOTIF_TYPE = Object.freeze({
   DOA_PRAYED: 'DOA_PRAYED',
   BROADCAST: 'BROADCAST',
   SECURITY: 'SECURITY',
-  ACCOUNT: 'ACCOUNT'
+  ACCOUNT: 'ACCOUNT',
+  UMRAH_REMINDER: 'UMRAH_REMINDER'
 });
 
 /** Ikon kategori yang dibenarkan (whitelist — elak input ikon sewenang-wenang). */

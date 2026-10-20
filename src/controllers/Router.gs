@@ -58,6 +58,8 @@ const Router = {
       'umrah.semak.toggle': { role: U, fn: UmrahController.semakToggle },
       'umrah.semak.delete': { role: U, fn: UmrahController.semakDelete },
       'umrah.berlepas.set': { role: U, fn: UmrahController.berlepasSet },
+      'umrah.peringatan.set': { role: U, fn: UmrahController.peringatanSet },
+      'umrah.peringatan.test': { role: U, fn: UmrahController.peringatanTest },
       'umrah.belanja.list': { role: U, fn: UmrahController.belanjaList },
       'umrah.belanja.save': { role: U, fn: UmrahController.belanjaSave },
       'umrah.belanja.delete': { role: U, fn: UmrahController.belanjaDelete },

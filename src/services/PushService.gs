@@ -22,7 +22,7 @@ const PushService = {
   MAX_TOKENS_PER_USER: 5,
   TOKEN_RE: /^[A-Za-z0-9_:\-]{20,4096}$/,
   /** Jenis notifikasi yang dihantar ke telefon. */
-  PUSH_TYPES: ['DOA_RECEIVED', 'DOA_PRAYED'],
+  PUSH_TYPES: ['DOA_RECEIVED', 'DOA_PRAYED', 'UMRAH_REMINDER'],
 
   /** @return {{projectId:string, clientEmail:string, privateKey:string, tokenUri:string}|null} */
   config: function () {

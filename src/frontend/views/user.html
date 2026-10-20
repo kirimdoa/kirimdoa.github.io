@@ -582,11 +582,11 @@
   };
 
   // ---------------------------------------------------------------- Notifikasi
-  const NOTIF_ICON = { WELCOME: 'sparkle', DOA_RECEIVED: 'inbox', DOA_PRAYED: 'hands', BROADCAST: 'bell', SECURITY: 'lock', ACCOUNT: 'user' };
+  const NOTIF_ICON = { WELCOME: 'sparkle', DOA_RECEIVED: 'inbox', DOA_PRAYED: 'hands', BROADCAST: 'bell', SECURITY: 'lock', ACCOUNT: 'user', UMRAH_REMINDER: 'kaaba' };
   KD.views.notifications = {
     async render(el) {
       let page = 1;
-      el.innerHTML = html`<div class="page-head"><div><h1>Notifikasi</h1><p>Doa baharu dan makluman akaun anda.</p></div><button class="btn btn-outline" data-act="all">${icon('check')}Tandakan semua dibaca</button></div><section class="panel panel-flush" data-box>${skeletonList(4)}</section>`.s;
+      el.innerHTML = html`<div class="page-head"><div><h1>Notifikasi</h1><p>Doa baharu, peringatan Umrah dan makluman akaun anda.</p></div><button class="btn btn-outline" data-act="all">${icon('check')}Tandakan semua dibaca</button></div><section class="panel panel-flush" data-box>${skeletonList(4)}</section>`.s;
       const load = async () => {
         const box = qs('[data-box]', el);
         try {
@@ -605,6 +605,7 @@
         }
         const ref = b.getAttribute('data-ref');
         if (/^DOA_(RECEIVED|PRAYED)$/.test(b.getAttribute('data-type')) && ref) openDoa(ref);
+        else if (b.getAttribute('data-type') === 'UMRAH_REMINDER') KD.router.go('/umrah');
       });
       on(el, 'click', '[data-act="all"]', async (e, b) => busy(b, async () => { try { await api.markAllNotificationsRead(); KD.app.setUnread(0); toast('Semua notifikasi ditandakan dibaca.'); load(); } catch (err) { toastError(err); } }));
       on(el, 'click', '[data-page]', (e, b) => { page = Number(b.getAttribute('data-page')); load(); });

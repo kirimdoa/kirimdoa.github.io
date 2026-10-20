@@ -55,6 +55,11 @@ const Migration = {
       id: 'MIGRATION_009',
       description: 'Planner Umrah: sheet UMRAH_PROFIL (tarikh berlepas) + lajur UMRAH_SEMAK.offset_hari',
       up: function () { return ['UMRAH_PROFIL', 'UMRAH_SEMAK'].map(function (k) { return SheetManager.ensure(k); }); }
+    },
+    {
+      id: 'MIGRATION_010',
+      description: 'Planner Umrah: lajur peringatan harian dalam UMRAH_PROFIL',
+      up: function () { return SheetManager.ensure('UMRAH_PROFIL'); }
     }
   ],
 

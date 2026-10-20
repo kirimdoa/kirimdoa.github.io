@@ -159,12 +159,21 @@ function installTriggers() {
   });
   ScriptApp.newTrigger('dailyMaintenance').timeBased().everyDays(1).atHour(2).create();
   console.log('Pencetus dailyMaintenance dipasang (setiap hari ~02:00).');
+  UmrahService.ensureReminderTrigger(true);
+  console.log('Pencetus umrahReminder dipasang (setiap hari ~08:00).');
+}
+
+/** Peringatan harian Planner Umrah (~08:00). Dipasang automatik oleh dailyMaintenance jika belum wujud. */
+function umrahReminder(e) {
+  if (!(e && e.triggerUid)) requireOwner_();
+  return UmrahService.sendReminders();
 }
 
 /** Dipanggil oleh pencetus masa (juga boleh dijalankan manual oleh pemilik). */
 function dailyMaintenance(e) {
   // Pencetus masa menghantar objek acara dengan triggerUid; panggilan manual mesti pemilik.
   if (!(e && e.triggerUid)) requireOwner_();
+  try { UmrahService.ensureReminderTrigger(false); } catch (err) { ErrorHandler.record(err, { action: 'ensureReminderTrigger' }); }
   return MaintenanceService.daily();
 }
 

@@ -10,6 +10,10 @@
 .um-trip__count { font-size: var(--fs-sm); color: var(--maroon); font-weight: 600; font-variant-numeric: tabular-nums; }
 .um-trip__count .i { display: inline-block; vertical-align: -2px; width: 15px; height: 15px; }
 @media (max-width: 720px) { .um-trip { padding: var(--sp-3) var(--sp-4); gap: var(--sp-3); } }
+.um-remind { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-3); border-top: 1px solid var(--line); padding-top: var(--sp-3); }
+.um-remind .check { flex: 1 1 260px; min-width: 0; }
+.um-remind .check b { display: block; color: var(--maroon-900); }
+.um-remind__push { font-size: var(--fs-xs); color: var(--success); font-weight: 600; }
 .um-trip.is-unset .um-trip__date { color: var(--muted); font-weight: 600; font-size: var(--fs-md); }
 .um-hero { display: flex; align-items: center; gap: var(--sp-5); flex-wrap: wrap; }
 .um-hero__pct { font-family: var(--font-display); font-size: var(--fs-3xl); color: var(--maroon); line-height: 1; font-variant-numeric: tabular-nums; }
@@ -144,7 +148,8 @@
           <div class="um-trip__body"><span class="um-trip__label">Tarikh berlepas</span>
             ${dep ? html`<span class="um-trip__date" data-berlepas>${fmtDate(dep)}</span><span class="um-trip__count">${countdown(dep)}</span>`
               : html`<span class="um-trip__date">Belum ditetapkan</span><span class="small muted">Tetapkan untuk tarikh sasaran automatik.</span>`}</div>
-          <button class="btn ${dep ? 'btn-outline' : 'btn-primary'} btn-sm" data-act="berlepas">${icon(dep ? 'edit' : 'calendar', 'i-sm')}${dep ? 'Ubah' : 'Tetapkan'}</button></section>
+          <button class="btn ${dep ? 'btn-outline' : 'btn-primary'} btn-sm" data-act="berlepas">${icon(dep ? 'edit' : 'calendar', 'i-sm')}${dep ? 'Ubah' : 'Tetapkan'}</button>
+          ${dep ? remindRow() : ''}</section>
         <section class="panel um-hero"><div class="um-hero__pct">${pct}%</div><div class="um-hero__body"><strong>${fmtNum(data.done)} daripada ${fmtNum(items.length)} perkara siap</strong>
           <div class="um-track" role="progressbar" aria-label="Kemajuan persiapan" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></div></div>
           <button class="btn btn-outline btn-sm" data-act="add">${icon('plus', 'i-sm')}Tambah item</button></section>
@@ -175,6 +180,35 @@
           data.tarikhBerlepas ? 'Tarikh ini ikut beranjak jika tarikh berlepas diubah.' : '')}
         ${field('s-catatan', 'Catatan', html`<textarea class="textarea" id="s-catatan" name="catatan" maxlength="500" style="min-height:80px">${i ? i.catatan : ''}</textarea>`)}`
     });
+    /** Baris peringatan harian dalam bar tarikh berlepas. */
+    const remindRow = () => {
+      const ps = KD.pwa && KD.pwa.pushState ? KD.pwa.pushState() : 'unconfigured';
+      const push = ps === 'on' ? html`<span class="um-remind__push">${icon('check', 'i-sm')} Notifikasi telefon hidup</span>`
+        : ps === 'unconfigured' || ps === 'unsupported' ? html`<span class="small muted">Notifikasi dalam app</span>`
+        : html`<button class="btn btn-primary btn-sm" data-act="push-on">${icon('bell', 'i-sm')}Hidupkan notifikasi telefon</button>`;
+      return html`<div class="um-remind">
+        <label class="check"><input type="checkbox" data-remind ${data.peringatan !== false ? raw('checked') : ''}>
+          <span><b>Peringatan harian (8 pagi)</b><span class="small muted">Kiraan hari ke Tanah Suci dan persiapan belum siap: H-30, H-21, H-14, kemudian setiap hari dari H-7.</span></span></label>
+        <div class="row row-wrap" style="gap:var(--sp-2)">${push}<button class="btn btn-ghost btn-sm" data-act="remind-test">${icon('bell', 'i-sm')}Cuba sekarang</button></div>
+      </div>`;
+    };
+    on(box, 'change', '[data-remind]', async (e, cb) => {
+      cb.disabled = true;
+      try {
+        const r = await call('umrah.peringatan.set', { aktif: cb.checked });
+        data.peringatan = r.peringatan;
+        toast(r.peringatan ? 'Peringatan harian dihidupkan.' : 'Peringatan harian dimatikan.');
+      } catch (err) { cb.checked = !cb.checked; toastError(err); }
+      cb.disabled = false;
+    });
+    on(box, 'click', '[data-act="push-on"]', async () => { if (KD.pwa && KD.pwa.enablePush) await KD.pwa.enablePush(); draw(); });
+    on(box, 'click', '[data-act="remind-test"]', (e, b) => busy(b, async () => {
+      try {
+        const r = await call('umrah.peringatan.test');
+        toast(r.title + '. ' + (r.pushEnabled && r.devices ? 'Dihantar ke telefon dan Notifikasi.' : 'Dihantar ke Notifikasi dalam app.'));
+        if (KD.app && KD.app.refreshUnread) KD.app.refreshUnread();
+      } catch (err) { toastError(err); }
+    }));
     const berlepasForm = () => {
       const lama = data.tarikhBerlepas;
       const m = modal({ title: lama ? 'Ubah tarikh berlepas' : 'Tetapkan tarikh berlepas',

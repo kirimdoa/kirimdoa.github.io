@@ -103,7 +103,9 @@ const SCHEMA = Object.freeze({
   /** 1.7.1 — Planner Umrah: tarikh berlepas per pengguna (satu baris setiap pengguna). */
   UMRAH_PROFIL: {
     sheet: 'UMRAH_PROFIL', id: 'user_id',
-    columns: ['user_id', 'tarikh_berlepas', 'created_at', 'updated_at'],
+    columns: ['user_id', 'tarikh_berlepas', 'created_at', 'updated_at',
+      // 1.8.0: peringatan harian ('' / 'YA' = hidup, 'TIDAK' = mati) + tarikh peringatan terakhir (elak hantar dua kali)
+      'peringatan', 'last_peringatan'],
     types: {}
   },
   /** 1.7.0 — Planner Umrah: perbelanjaan (SAR / RM). */

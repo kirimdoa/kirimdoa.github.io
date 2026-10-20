@@ -63,6 +63,8 @@ const UmrahController = {
   semakToggle: function (p, ctx) { return UmrahService.semakToggle(ctx, p); },
   semakDelete: function (p, ctx) { return UmrahService.remove(ctx, 'UMRAH_SEMAK', p); },
   berlepasSet: function (p, ctx) { return UmrahService.berlepasSet(ctx, p); },
+  peringatanSet: function (p, ctx) { return UmrahService.peringatanSet(ctx, p); },
+  peringatanTest: function (p, ctx) { return UmrahService.peringatanTest(ctx); },
   belanjaList: function (p, ctx) { return UmrahService.belanjaList(ctx); },
   belanjaSave: function (p, ctx) { return UmrahService.belanjaSave(ctx, p); },
   belanjaDelete: function (p, ctx) { return UmrahService.remove(ctx, 'UMRAH_BELANJA', p); },

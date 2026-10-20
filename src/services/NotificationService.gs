@@ -16,8 +16,8 @@ const NotificationService = {
     };
   },
 
-  /** Tidak melontar — notifikasi bukan laluan kritikal. */
-  notify: function (userId, type, title, message, referenceId) {
+  /** Tidak melontar — notifikasi bukan laluan kritikal. path = halaman dibuka apabila notifikasi telefon ditekan. */
+  notify: function (userId, type, title, message, referenceId, path) {
     try {
       NotificationRepository.insertMany([NotificationService.build(userId, type, title, message, referenceId)]);
     } catch (e) {
@@ -27,7 +27,7 @@ const NotificationService = {
     if (PushService.PUSH_TYPES.indexOf(type) >= 0) {
       let badge = '';
       try { badge = NotificationService.unreadCount(userId); } catch (e) { /* abaikan */ }
-      PushService.sendToUser(userId, { title: title, body: message, type: type, ref: referenceId || '', path: '#/notifikasi', badge: badge });
+      PushService.sendToUser(userId, { title: title, body: message, type: type, ref: referenceId || '', path: path || '#/notifikasi', badge: badge });
     }
   },
 

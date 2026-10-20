@@ -26,6 +26,7 @@ const SETTINGS_DEFS = Object.freeze({
   DOA_MAX_LENGTH: { type: 'int', default: 2000, min: 100, max: 10000, minRole: 'ADMIN', public: true, description: 'Panjang maksimum isi doa' },
   DEFAULT_PAGE_SIZE: { type: 'int', default: 20, min: 5, max: 100, minRole: 'ADMIN', public: true, description: 'Saiz halaman senarai' },
   KADAR_SAR_RM: { type: 'string', default: '1.18', max: 10, minRole: 'ADMIN', public: true, description: 'Planner Umrah: kadar tukaran 1 SAR = ? RM (anggaran perbelanjaan)' },
+  UMRAH_PERINGATAN_AKTIF: { type: 'bool', default: true, minRole: 'ADMIN', public: false, description: 'Planner Umrah: hantar peringatan harian ~8 pagi (kiraan hari & persiapan belum siap) kepada jemaah' },
   NOTIFY_EMAIL_ENABLED: { type: 'bool', default: false, minRole: 'ADMIN', public: false, description: 'Hantar email apabila doa diterima melalui pautan' },
   ADMIN_EMAIL: { type: 'string', default: '', max: 254, minRole: 'SUPER_ADMIN', public: false, description: 'Email pentadbir untuk maklum balas & amaran' }
 });

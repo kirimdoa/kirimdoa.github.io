@@ -81,6 +81,84 @@ const TestSuiteUmrah = {
       t.eq(res.items.filter(function (i) { return /Pasport/.test(i.perkara); })[0].tarikhSasar, UmrahService.shiftDate(d, -5));
       t.eq(res.bezaHari, 0); t.eq(res.jadualDianjak, 0, 'tiada tarikh lama → jadual tidak dianjak');
     }],
+    ['Peringatan harian: jadual H-30/21/14/7..0, kandungan, tiada pendua, boleh dimatikan', function (t) {
+      const a = TestHelpers.user('ingat');
+      const today = DateUtils.dayKey(new Date());
+      const dep = UmrahService.shiftDate(today, 4);
+      TestAssert.apiOk(TestHelpers.call(a.token, 'umrah.semak.seed', { tarikhBerlepas: dep }));
+      const items = TestAssert.apiOk(TestHelpers.call(a.token, 'umrah.semak.list'));
+      t.eq(items.peringatan, true, 'peringatan hidup secara lalai');
+      const first = items.items.filter(function (i) { return /Pasport/.test(i.perkara); })[0];
+      TestAssert.apiOk(TestHelpers.call(a.token, 'umrah.semak.toggle', { id: first.id, done: true }));
+      const mineN = function () { return NotificationRepository.byUser(a.user.id).filter(function (n) { return n.type === 'UMRAH_REMINDER'; }); };
+      const r1 = UmrahService.sendReminders(today);
+      t.ok(r1.sent >= 1, 'dihantar');
+      const n1 = mineN();
+      t.eq(n1.length, 1);
+      t.eq(n1[0].title, '4 hari lagi ke Tanah Suci');
+      t.ok(/^31 persiapan belum selesai \(\d+ perlu disiapkan hari ini\): Visa Umrah & tiket penerbangan,/.test(n1[0].message), n1[0].message);
+      t.ok(/\+28 lagi\.$/.test(n1[0].message), 'ringkas: 3 nama + baki');
+      UmrahService.sendReminders(today);
+      t.eq(mineN().length, 1, 'tiada pendua pada hari sama');
+      const besok = UmrahService.shiftDate(today, 1);
+      UmrahService.sendReminders(besok);
+      t.eq(mineN().length, 2); t.eq(mineN()[1].title, '3 hari lagi ke Tanah Suci');
+      t.ok(UmrahService.isReminderDay(30) && UmrahService.isReminderDay(14) && UmrahService.isReminderDay(0));
+      t.ok(!UmrahService.isReminderDay(10) && !UmrahService.isReminderDay(-1) && !UmrahService.isReminderDay(31));
+      UmrahService.sendReminders(UmrahService.shiftDate(today, -6));
+      t.eq(mineN().length, 2, 'H-10 tidak dihantar');
+      UmrahService.sendReminders(dep);
+      t.eq(mineN()[2].title, 'Hari ini berangkat ke Tanah Suci'); t.ok(/^Selamat berangkat/.test(mineN()[2].message));
+      UmrahService.sendReminders(UmrahService.shiftDate(dep, 1));
+      t.eq(mineN().length, 3, 'selepas berlepas tidak dihantar');
+      TestAssert.apiOk(TestHelpers.call(a.token, 'umrah.peringatan.set', { aktif: false }));
+      t.eq(TestAssert.apiOk(TestHelpers.call(a.token, 'umrah.semak.list')).peringatan, false);
+      UmrahService.sendReminders(UmrahService.shiftDate(today, 2));
+      t.eq(mineN().length, 3, 'dimatikan → tiada peringatan');
+      TestAssert.apiOk(TestHelpers.call(a.token, 'umrah.peringatan.set', { aktif: true }));
+      TestAssert.apiFail(TestHelpers.call(a.token, 'umrah.peringatan.set', {}), ERROR_CODES.VALIDATION_ERROR);
+    }],
+    ['Peringatan: semua siap / tiada senarai; contoh peringatan; pencetus dipasang sekali', function (t) {
+      const a = TestHelpers.user('siap');
+      const today = DateUtils.dayKey(new Date());
+      TestAssert.apiFail(TestHelpers.call(a.token, 'umrah.peringatan.test'), ERROR_CODES.VALIDATION_ERROR);
+      TestAssert.apiOk(TestHelpers.call(a.token, 'umrah.berlepas.set', { tarikhBerlepas: UmrahService.shiftDate(today, 7) }));
+      t.eq(UmrahService.reminderFor(a.user.id, today, UmrahService.shiftDate(today, 7)).body, 'Buka Planner Umrah dan jana senarai semak persiapan anda.');
+      const own = TestAssert.apiOk(TestHelpers.call(a.token, 'umrah.semak.save', { perkara: 'Satu-satunya', fasa: 'SEBELUM' }));
+      TestAssert.apiOk(TestHelpers.call(a.token, 'umrah.semak.toggle', { id: own.id, done: true }));
+      t.eq(UmrahService.reminderFor(a.user.id, today, UmrahService.shiftDate(today, 7)).body, 'Semua persiapan sebelum berlepas sudah siap. Alhamdulillah.');
+      const res = TestAssert.apiOk(TestHelpers.call(a.token, 'umrah.peringatan.test'));
+      t.eq(res.title, '7 hari lagi ke Tanah Suci');
+      t.eq(NotificationRepository.byUser(a.user.id).filter(function (n) { return n.type === 'UMRAH_REMINDER'; }).length, 1);
+      t.eq(UmrahService.repo('UMRAH_PROFIL').findById(a.user.id).last_peringatan, '', 'contoh tidak menghalang peringatan sebenar');
+      const count = function () { return ScriptApp.getProjectTriggers().filter(function (x) { return x.getHandlerFunction() === 'umrahReminder'; }).length; };
+      UmrahService.ensureReminderTrigger(false); UmrahService.ensureReminderTrigger(false);
+      t.eq(count(), 1, 'idempoten');
+      UmrahService.ensureReminderTrigger(true);
+      t.eq(count(), 1, 'pasang semula tanpa pendua');
+    }],
+    ['Peringatan: notifikasi telefon membuka Planner Umrah', function (t) {
+      const st = globalThis.__mockState;
+      const a = TestHelpers.user('telefon');
+      TestAssert.apiOk(TestHelpers.call(a.token, 'push.register', { token: 'umrahTok_' + 'c'.repeat(40) }));
+      TestAssert.apiOk(TestHelpers.call(a.token, 'umrah.berlepas.set', { tarikhBerlepas: UmrahService.shiftDate(DateUtils.dayKey(new Date()), 2) }));
+      Env.set('FCM_SERVICE_ACCOUNT', globalThis.__testServiceAccount);
+      Env.set('PUBLIC_BASE_URL', 'https://kirimdoa.github.io/');
+      CacheService.getScriptCache().remove(PushService.TOKEN_CACHE_KEY);
+      try {
+        const start = st.fetches.length;
+        UmrahService.sendReminders();
+        const sends = st.fetches.slice(start).filter(function (c) { return /messages:send/.test(c.url); }).map(function (c) { return JSON.parse(c.params.payload).message; })
+          .filter(function (m) { return m.token.indexOf('umrahTok_') === 0; });
+        t.eq(sends.length, 1, 'dihantar ke telefon');
+        t.eq(sends[0].notification.title, '2 hari lagi ke Tanah Suci');
+        t.eq(sends[0].webpush.fcm_options.link, 'https://kirimdoa.github.io/#/umrah');
+        t.eq(sends[0].data.type, 'UMRAH_REMINDER');
+      } finally {
+        Env.set('FCM_SERVICE_ACCOUNT', '');
+        Env.set('PUBLIC_BASE_URL', '');
+      }
+    }, { nodeOnly: true }],
     ['Senarai semak: tambah, sunting, padam item sendiri; item sendiri di hujung', function (t) {
       const a = TestHelpers.user('semak');
       const d = TestAssert.apiOk(TestHelpers.call(a.token, 'umrah.semak.save', { perkara: '<b>Beli</b> kurma', fasa: 'SEMASA', kumpulan: 'MADINAH' }));

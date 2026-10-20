@@ -9,7 +9,7 @@
 const CONFIG = Object.freeze({
   APP_NAME: 'Kirim Doa',
   TAGLINE: 'Doa anda, cahaya hati',
-  VERSION: '1.7.1',
+  VERSION: '1.8.0',
   TIMEZONE_FALLBACK: 'Asia/Kuala_Lumpur',
 
   DEFAULT_PAGE_SIZE: 20,
@@ -79,6 +79,7 @@ const CONFIG = Object.freeze({
     'public.feedback.global': [100, 3600],
     'export.pdf': [10, 3600],
     'umrah.write': [400, 3600],
+    'umrah.test': [5, 3600],
     'attachment.get': [120, 3600],
     'push.register': [20, 3600],
     'push.test': [10, 3600]

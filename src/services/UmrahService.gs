@@ -142,12 +142,18 @@ const UmrahService = {
     return (p && p.tarikh_berlepas) || '';
   },
 
-  saveBerlepas: function (userId, key) {
+  profil: function (userId) { return UmrahService.repo('UMRAH_PROFIL').findById(userId) || null; },
+
+  saveProfil: function (userId, patch) {
     const repo = UmrahService.repo('UMRAH_PROFIL');
     const now = DateUtils.nowIso();
-    if (repo.findById(userId)) return repo.update(userId, { tarikh_berlepas: key, updated_at: now });
-    return repo.insert({ user_id: userId, tarikh_berlepas: key, created_at: now, updated_at: now });
+    if (repo.findById(userId)) return repo.update(userId, Object.assign({}, patch, { updated_at: now }));
+    return repo.insert(Object.assign({ user_id: userId, tarikh_berlepas: '', peringatan: '', last_peringatan: '', created_at: now }, patch, { updated_at: now }));
   },
+
+  saveBerlepas: function (userId, key) { return UmrahService.saveProfil(userId, { tarikh_berlepas: key }); },
+
+  peringatanOn: function (p) { return !p || String(p.peringatan || '').toUpperCase() !== 'TIDAK'; },
 
   /** Offset item lalai mengikut teks perkara (untuk rekod 1.7.0 yang belum ada offset_hari). */
   defaultOffset: function (perkara) {
@@ -186,7 +192,8 @@ const UmrahService = {
     const rows = UmrahService.mine('UMRAH_SEMAK', ctx.userId);
     rows.sort(function (a, b) { return (a.urutan || 0) - (b.urutan || 0) || (a.created_at < b.created_at ? -1 : 1); });
     const items = rows.map(UmrahService.semakDTO);
-    return { items: items, total: items.length, done: items.filter(function (i) { return i.done; }).length, tarikhBerlepas: UmrahService.berlepas(ctx.userId) };
+    return { items: items, total: items.length, done: items.filter(function (i) { return i.done; }).length, tarikhBerlepas: UmrahService.berlepas(ctx.userId),
+      peringatan: UmrahService.peringatanOn(UmrahService.profil(ctx.userId)) };
   },
 
   semakSeed: function (ctx, payload) {
@@ -252,6 +259,7 @@ const UmrahService = {
       if (jadualDianjak) UmrahService.repo('UMRAH_JADUAL').updateMany(jp);
     }
     UmrahService.saveBerlepas(ctx.userId, baru);
+    UmrahService.ensureReminderTriggerSafe();
     return Object.assign(UmrahService.semakList(ctx), { dianjak: dianjak, jadualDianjak: jadualDianjak, bezaHari: beza });
   },
 
@@ -395,5 +403,104 @@ const UmrahService = {
     return UmrahService.jadualDTO(UmrahService.repo('UMRAH_JADUAL').insert(Object.assign(row, {
       jadual_id: IdUtils.generate('J'), user_id: ctx.userId, created_at: now
     })));
+  },
+
+  // ================================================================== Peringatan harian
+
+  /** Hari peringatan dihantar: H-30, H-21, H-14, kemudian setiap hari H-7 hingga hari berlepas. */
+  isReminderDay: function (n) { return n === 30 || n === 21 || n === 14 || (n >= 0 && n <= 7); },
+
+  reminderTitle: function (n) {
+    if (n === 0) return 'Hari ini berangkat ke Tanah Suci';
+    if (n === 1) return 'Esok berangkat ke Tanah Suci';
+    return n + ' hari lagi ke Tanah Suci';
+  },
+
+  /** Persiapan sebelum berlepas yang belum siap: lewat / hari ini dahulu, kemudian ikut tarikh sasaran & urutan. */
+  pendingBefore: function (userId) {
+    return UmrahService.mine('UMRAH_SEMAK', userId)
+      .filter(function (r) { return !r.is_done && r.fasa === 'SEBELUM'; })
+      .sort(function (a, b) {
+        const ka = a.tarikh_sasar || '9999-12-31', kb = b.tarikh_sasar || '9999-12-31';
+        return ka < kb ? -1 : ka > kb ? 1 : (a.urutan || 0) - (b.urutan || 0);
+      });
+  },
+
+  /** Kandungan peringatan untuk pengguna pada hari tertentu. @return {{title:string, body:string, pending:number}} */
+  reminderFor: function (userId, today, berlepas) {
+    const n = UmrahService.dayDiff(today, berlepas);
+    const all = UmrahService.mine('UMRAH_SEMAK', userId);
+    const pending = UmrahService.pendingBefore(userId);
+    let body;
+    if (!all.length) body = 'Buka Planner Umrah dan jana senarai semak persiapan anda.';
+    else if (!pending.length) body = 'Semua persiapan sebelum berlepas sudah siap. Alhamdulillah.';
+    else {
+      const names = pending.slice(0, 3).map(function (r) { return r.perkara; });
+      const lewat = pending.filter(function (r) { return r.tarikh_sasar && r.tarikh_sasar <= today; }).length;
+      body = pending.length + ' persiapan belum selesai' + (lewat ? ' (' + lewat + ' perlu disiapkan hari ini)' : '') + ': ' +
+        names.join(', ') + (pending.length > 3 ? ', +' + (pending.length - 3) + ' lagi.' : '.');
+    }
+    if (n === 0) body = 'Selamat berangkat, semoga Umrah anda mabrur. ' + body;
+    return { title: UmrahService.reminderTitle(n), body: body, pending: pending.length };
+  },
+
+  /**
+   * Dijalankan oleh pencetus harian ~08:00. Idempoten untuk hari yang sama (last_peringatan).
+   * @param {string=} todayKey untuk ujian; lalai hari ini (zon waktu skrip)
+   */
+  sendReminders: function (todayKey) {
+    const out = { checked: 0, sent: 0 };
+    if (!SettingsService.get('UMRAH_PERINGATAN_AKTIF')) return Object.assign(out, { disabled: true });
+    const today = todayKey || DateUtils.dayKey(new Date());
+    const patch = {};
+    UmrahService.repo('UMRAH_PROFIL').all().forEach(function (p) {
+      if (!p.tarikh_berlepas || !UmrahService.peringatanOn(p) || p.last_peringatan === today) return;
+      out.checked++;
+      const n = UmrahService.dayDiff(today, p.tarikh_berlepas);
+      if (!UmrahService.isReminderDay(n)) return;
+      const user = UserRepository.findById(p.user_id);
+      if (!user || user.status !== USER_STATUS.ACTIVE) return;
+      const msg = UmrahService.reminderFor(p.user_id, today, p.tarikh_berlepas);
+      NotificationService.notify(p.user_id, NOTIF_TYPE.UMRAH_REMINDER, msg.title, msg.body, '', '#/umrah');
+      patch[p.user_id] = { last_peringatan: today };
+      out.sent++;
+    });
+    if (Object.keys(patch).length) UmrahService.repo('UMRAH_PROFIL').updateMany(patch);
+    AppLogger.info('Peringatan Umrah', out);
+    return out;
+  },
+
+  /** Hidup / matikan peringatan harian untuk pengguna sendiri. */
+  peringatanSet: function (ctx, payload) {
+    UmrahService.guardWrite(ctx);
+    const p = Validator.validate(payload, { aktif: { type: 'boolean', required: true, label: 'Peringatan' } });
+    UmrahService.saveProfil(ctx.userId, { peringatan: p.aktif ? 'YA' : 'TIDAK' });
+    UmrahService.ensureReminderTriggerSafe();
+    return { peringatan: p.aktif };
+  },
+
+  /** Hantar contoh peringatan sekarang (ke app + telefon) supaya pengguna boleh menyemak notifikasi. */
+  peringatanTest: function (ctx) {
+    SecurityService.rateLimit('umrah.test', ctx.userId);
+    const berlepas = UmrahService.berlepas(ctx.userId);
+    if (!berlepas) throw Errors.validation('Tetapkan tarikh berlepas dahulu.');
+    const msg = UmrahService.reminderFor(ctx.userId, DateUtils.dayKey(new Date()), berlepas);
+    NotificationService.notify(ctx.userId, NOTIF_TYPE.UMRAH_REMINDER, msg.title, msg.body, '', '#/umrah');
+    UmrahService.ensureReminderTriggerSafe();
+    return { title: msg.title, body: msg.body, devices: PushTokenRepository.activeByUser(ctx.userId).length, pushEnabled: PushService.enabled() };
+  },
+
+  /** Seperti ensureReminderTrigger, tetapi tidak melontar (dipanggil dalam permintaan pengguna; Web App berjalan sebagai pemilik). */
+  ensureReminderTriggerSafe: function () {
+    try { return UmrahService.ensureReminderTrigger(false); } catch (e) { AppLogger.warn('Pencetus peringatan gagal dipasang', { error: String(e && e.message || e) }); return { installed: false }; }
+  },
+
+  /** Pasang pencetus umrahReminder (~08:00) jika belum wujud. force = pasang semula. */
+  ensureReminderTrigger: function (force) {
+    const existing = ScriptApp.getProjectTriggers().filter(function (t) { return t.getHandlerFunction() === 'umrahReminder'; });
+    if (existing.length && !force) return { installed: false };
+    existing.forEach(function (t) { ScriptApp.deleteTrigger(t); });
+    ScriptApp.newTrigger('umrahReminder').timeBased().everyDays(1).atHour(8).create();
+    return { installed: true };
   }
 };
