@@ -45,6 +45,26 @@ with sync_playwright() as p:
     req = urllib.request.Request(B + '__api', data=json.dumps({'action': 'umrah.semak.list', 'payload': {}, 'token': tok}).encode(), headers={'Content-Type': 'text/plain'})
     items = json.loads(urllib.request.urlopen(req).read())['data']['items']
     assert [i for i in items if i['id'] == fid][0]['done'] is True; step('pelayan merekod tanda yang dibuat luar talian')
+    # Titipan doa: baca & tanda "telah dibacakan" tanpa internet
+    def call(action, payload, token=None):
+        body = {'action': action, 'payload': payload}
+        if token: body['token'] = token
+        r = urllib.request.Request(B + '__api', data=json.dumps(body).encode(), headers={'Content-Type': 'text/plain'})
+        return json.loads(urllib.request.urlopen(r).read())
+    link = call('recipient.create', {'displayName': 'Jemaah', 'title': 'Doakan umrah saya', 'occasion': 'UMRAH'}, tok)['data']
+    pub = call('recipient.public', {'code': link['code']})['data']; time.sleep(3.5)
+    sub = call('recipient.submit', {'code': link['code'], 'senderName': 'Mak Long', 'doaText': 'Semoga dipermudahkan segala urusan.', 'formToken': pub['formToken']})
+    assert sub['success'], sub
+    pg.goto(B + '#/baca?scope=RECEIVED'); pg.wait_for_selector('[data-act=prayed]', timeout=20000); step('mod baca dibuka dalam talian (disimpan)')
+    slow['off'] = True
+    pg.reload(); pg.wait_for_selector('[data-act=prayed]', timeout=20000); step('luar talian: titipan doa masih boleh dibaca')
+    pg.click('[data-act=prayed]'); pg.wait_for_selector('[data-ok]'); pg.click('[data-ok]')
+    pg.wait_for_selector('text=pengirim akan dimaklumkan apabila ada internet', timeout=20000)
+    assert pg.evaluate("JSON.parse(localStorage.getItem('kd.q1')||'[]').filter(x=>x.action==='doa.markPrayed').length") == 1; step('telah dibacakan (luar talian) → beratur')
+    slow['off'] = False
+    pg.evaluate("window.dispatchEvent(new Event('online'))"); pg.wait_for_selector('text=disegerakkan', timeout=20000)
+    items = call('doa.list', {'scope': 'RECEIVED'}, tok)['data']['items']
+    assert items[0]['isPrayed'] is True; step('disegerakkan → doa ditanda telah dibacakan di pelayan')
     pg.click('[data-act=menu]') if pg.locator('[data-act=menu]').count() else None
     pg.evaluate("KD.auth.clear()")
     assert pg.evaluate("Object.keys(localStorage).filter(k=>k.indexOf('kd.c1.')===0).length") == 0; step('log keluar → cache dipadam')

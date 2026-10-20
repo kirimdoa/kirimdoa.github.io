@@ -47,6 +47,21 @@ with sync_playwright() as p:
     pg.wait_for_selector('text=Beli kurma Ajwa'); step('tambah item sendiri (modal)')
     pg.reload(); pg.wait_for_selector('.um-row'); assert pg.locator('.um-row.is-done').count() >= 0
 
+    pg.click('[data-tab=kaunter]'); pg.wait_for_selector('.um-ktr__btn')
+    for i in range(7):
+        pg.click('[data-ktr="+1"]'); pg.wait_for_timeout(1600)
+    assert pg.inner_text('.um-ktr__num') == '7/7' and pg.is_disabled('.um-ktr__btn'); step('kaunter Tawaf 7/7 (getaran & elak tekan berganda)')
+    pg.reload(); pg.wait_for_selector('.um-ktr__num'); assert pg.inner_text('.um-ktr__num') == '7/7'; step('kiraan kekal selepas muat semula')
+    pg.wait_for_selector('#boot', state='detached'); pg.screenshot(path='e2e-shots/kd-kaunter.png', full_page=True)
+    pg.click('[data-ktr="semak"]'); pg.wait_for_selector('text=Ditanda dalam senarai semak'); step('Tawaf selesai → ditanda dalam senarai semak')
+    pg.click('[data-ktr-mode=SAIE]'); assert pg.inner_text('.um-ktr__dir') == 'Safa → Marwah'
+    pg.click('[data-ktr="+1"]'); assert pg.inner_text('.um-ktr__dir') == 'Marwah → Safa'; step("Sa'ie: arah Safa/Marwah bertukar")
+    pg.click('[data-tab=kad]'); pg.wait_for_selector('[data-act=kad-edit]'); pg.click('[data-act=kad-edit]'); pg.wait_for_selector('#kd-pasport'); pg.wait_for_timeout(200)
+    pg.fill('#kd-pasport', 'A12345678'); pg.fill('#kd-mutawwifTel', '+966 50 123 4567'); pg.fill('#kd-makkahNama', 'Hotel Contoh Makkah')
+    pg.fill('#kd-makkahArab', 'فندق مكة'); pg.click('[data-act=kad-save]'); pg.wait_for_selector('text=A12345678')
+    assert 'A12345678' not in pg.inner_text('.um-kad section:first-child dd:first-of-type')
+    no_hscroll(pg, 'kad'); pg.screenshot(path='e2e-shots/kd-kad.png', full_page=True)
+    pg.click('[data-ar=makkah]'); pg.wait_for_selector('.um-big-ar'); assert 'فندق مكة' in pg.inner_text('.um-big-ar'); pg.keyboard.press('Escape'); step('kad penting + paparan Arab untuk pemandu')
     pg.click('[data-tab=belanja]'); pg.wait_for_selector('[data-act=add]'); pg.click('[data-act=add]'); pg.wait_for_selector('#b-perkara')
     pg.fill('#b-perkara', 'Kurma Ajwa'); pg.fill('#b-jumlah', 'abc'); pg.click('[data-act=save]'); pg.wait_for_selector('.field-error'); step('validasi jumlah dipaparkan')
     pg.fill('#b-jumlah', '120'); pg.select_option('#b-kat', 'OLEOLE'); pg.click('[data-act=save]'); pg.wait_for_selector('.um-sum')

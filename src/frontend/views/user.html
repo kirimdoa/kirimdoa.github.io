@@ -144,7 +144,7 @@
   function prayedStatus(d) {
     if (d.isPrayed) {
       const by = d.isMine && d.direction === 'SENT' && d.ownerName ? html` oleh ${d.ownerName}` : '';
-      return html`<span class="badge badge-success">${icon('check', 'i-sm')}Telah dibacakan</span>${by} <span class="muted xs">${fmtDate(d.prayedAt, true)}</span>`;
+      return html`<span class="badge badge-success">${icon('check', 'i-sm')}Telah dibacakan</span>${by} <span class="muted xs">${fmtDate(d.prayedAt, true)}${d.prayedQueued ? ' · menunggu internet' : ''}</span>`;
     }
     return html`<span class="muted">Belum dibacakan</span>`;
   }
@@ -162,7 +162,15 @@
     let r = null;
     await busy(btn, async () => {
       try {
-        r = await api.markPrayed(d.id);
+        const q = await api.callOrQueue('doa.markPrayed', { id: d.id });
+        if (q.queued) {
+          /* Luar talian (cth. di Multazam/Raudhah): disimpan dalam telefon, pengirim dimaklumkan bila ada internet */
+          r = Object.assign({}, d, { isPrayed: true, canMarkPrayed: false, prayedQueued: true, prayedAt: new Date().toISOString(), senderWhatsApp: false, notified: '' });
+          Object.assign(d, r);
+          toast('Alhamdulillah. Luar talian: ditanda dalam telefon, pengirim akan dimaklumkan apabila ada internet.');
+          return;
+        }
+        r = q.data;
         Object.assign(d, r);
         toast(r.notified === 'APP' ? 'Alhamdulillah. Pengirim telah dimaklumkan dalam aplikasi.' : r.notified === 'EMAIL' ? 'Alhamdulillah. Pengirim telah dimaklumkan melalui email.' : 'Alhamdulillah. Doa ditandakan sudah dibacakan.');
       } catch (err) { toastError(err); }
@@ -446,6 +454,14 @@
         st.total = r.meta.total;
         r.items.forEach((d, k) => { st.items[(page - 1) * PAGE + k] = d; });
         st.loadedPages[page] = true;
+        if (page === 1 && !st.prefetching) {
+          /* Muat awal semua halaman di latar (disimpan dalam telefon) supaya boleh dibaca tanpa internet di Tanah Suci */
+          st.prefetching = true;
+          (async () => {
+            const pages = Math.min(20, Math.ceil(st.total / PAGE));
+            for (let pg = 2; pg <= pages; pg++) { try { await ensure((pg - 1) * PAGE); } catch (e) { break; } }
+          })();
+        }
       }
 
       async function show(i) {
@@ -483,7 +499,7 @@
         if (st.index + 3 >= Object.keys(st.loadedPages).length * PAGE && st.index + 3 < st.total) ensure(st.index + 3).catch(() => {});
       }
 
-      const restart = () => { st.items = []; st.loadedPages = {}; st.total = 0; qs('[data-reader]', el).innerHTML = skeletonList(2).s; show(0); };
+      const restart = () => { st.items = []; st.loadedPages = {}; st.total = 0; st.prefetching = false; qs('[data-reader]', el).innerHTML = skeletonList(2).s; show(0); };
       on(el, 'change', '[data-f="scope"]', (e, s) => { st.scope = s.value; restart(); });
       on(el, 'change', '[data-f="unprayed"]', (e, c) => { st.unprayedOnly = c.checked; restart(); });
       on(el, 'click', '[data-act="prayed"]', async (e, b) => {

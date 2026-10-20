@@ -136,6 +136,7 @@ const TestSuiteUmrah = {
       t.eq(count(), 1, 'idempoten');
       UmrahService.ensureReminderTrigger(true);
       t.eq(count(), 1, 'pasang semula tanpa pendua');
+      t.eq(ScriptApp.getProjectTriggers().filter(function (x) { return x.getHandlerFunction() === 'umrahReminderTrip'; }).length, 1, 'pencetus perjalanan dipasang');
     }],
     ['Peringatan: notifikasi telefon membuka Planner Umrah', function (t) {
       const st = globalThis.__mockState;
@@ -184,6 +185,36 @@ const TestSuiteUmrah = {
       t.eq(h.umrah.total, UmrahService.defaults().length); t.eq(h.umrah.done, 0); t.eq(h.umrah.tarikhBerlepas, dep);
       t.eq(h.umrah.items, undefined, 'tanpa senarai penuh');
       TestAssert.apiFail(api({ action: 'user.home', payload: {} }), ERROR_CODES.UNAUTHENTICATED);
+    }],
+    ['Peringatan perjalanan: Hari ke-N + jadual hari ini (13:00 MYT); tiada jadual → tiada notifikasi', function (t) {
+      const a = TestHelpers.user('trip');
+      const today = DateUtils.dayKey(new Date());
+      const dep = UmrahService.shiftDate(today, -2);
+      UmrahService.saveBerlepas(a.user.id, dep);
+      const mine = function () { return NotificationRepository.byUser(a.user.id).filter(function (n) { return n.type === 'UMRAH_REMINDER'; }); };
+      UmrahService.sendReminders(today, 'trip');
+      t.eq(mine().length, 0, 'tiada jadual hari ini → senyap');
+      TestAssert.apiOk(TestHelpers.call(a.token, 'umrah.jadual.save', { aktiviti: 'Ziarah Jabal Rahmah', tarikh: today, masa: '09:00', bandar: 'MAKKAH' }));
+      TestAssert.apiOk(TestHelpers.call(a.token, 'umrah.jadual.save', { aktiviti: 'Subuh berjemaah', tarikh: today, masa: '05:15', bandar: 'MAKKAH' }));
+      TestAssert.apiOk(TestHelpers.call(a.token, 'umrah.jadual.save', { aktiviti: 'Esok', tarikh: UmrahService.shiftDate(today, 1), masa: '05:15', bandar: 'MADINAH' }));
+      UmrahService.sendReminders(today, 'pre');
+      t.eq(mine().length, 0, 'mod sebelum berlepas tidak menghantar selepas berlepas');
+      const r = UmrahService.sendReminders(today, 'trip');
+      t.eq(r.sent, 1);
+      t.eq(mine()[0].title, 'Hari ke-3 di Makkah');
+      t.eq(mine()[0].message, 'Jadual hari ini: 05:15 Subuh berjemaah · 09:00 Ziarah Jabal Rahmah.');
+      UmrahService.sendReminders(today, 'trip');
+      t.eq(mine().length, 1, 'tiada pendua');
+      UmrahService.sendReminders(UmrahService.shiftDate(today, 1), 'trip');
+      t.eq(mine()[1].title, 'Hari ke-4 di Madinah');
+      const b = TestHelpers.user('tripdep');
+      UmrahService.saveBerlepas(b.user.id, today);
+      TestAssert.apiOk(TestHelpers.call(b.token, 'umrah.jadual.save', { aktiviti: 'Berlepas KLIA', tarikh: today, masa: '10:00', bandar: 'MALAYSIA' }));
+      UmrahService.sendReminders(today, 'pre');
+      const nb = NotificationRepository.byUser(b.user.id).filter(function (n) { return n.type === 'UMRAH_REMINDER'; });
+      t.eq(nb[0].title, 'Hari ini berangkat ke Tanah Suci');
+      t.ok(/Jadual hari ini: 10:00 Berlepas KLIA\.$/.test(nb[0].message), nb[0].message);
+      t.eq(UmrahService.jadualText([1, 2, 3, 4, 5, 6].map(function (i) { return { masa: '', aktiviti: 'A' + i }; })), 'A1 · A2 · A3 · A4 · +2 lagi');
     }],
     ['Senarai semak: tambah, sunting, padam item sendiri; item sendiri di hujung', function (t) {
       const a = TestHelpers.user('semak');

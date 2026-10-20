@@ -450,12 +450,39 @@ const UmrahService = {
     return { title: UmrahService.reminderTitle(n), body: body, pending: pending.length };
   },
 
+  /** Aktiviti Jadual untuk hari tertentu, disusun ikut masa. */
+  jadualOn: function (userId, day) {
+    return UmrahService.mine('UMRAH_JADUAL', userId).filter(function (r) { return r.tarikh === day; })
+      .sort(function (a, b) { return (a.masa || '99:99') < (b.masa || '99:99') ? -1 : 1; });
+  },
+
+  /** Ringkasan aktiviti: "05:15 Subuh berjemaah · 09:00 Ziarah …" (maks 4, + baki). */
+  jadualText: function (acts) {
+    const parts = acts.slice(0, 4).map(function (r) { return (r.masa ? r.masa + ' ' : '') + r.aktiviti; });
+    return parts.join(' · ') + (acts.length > 4 ? ' · +' + (acts.length - 4) + ' lagi' : '');
+  },
+
+  /** Peringatan semasa perjalanan (selepas tarikh berlepas): hanya jika ada aktiviti Jadual hari ini. */
+  tripReminderFor: function (userId, today, berlepas) {
+    const acts = UmrahService.jadualOn(userId, today);
+    if (!acts.length) return null;
+    const dayNo = UmrahService.dayDiff(berlepas, today) + 1;
+    const count = {};
+    acts.forEach(function (r) { count[r.bandar] = (count[r.bandar] || 0) + 1; });
+    const top = Object.keys(count).sort(function (a, b) { return count[b] - count[a]; })[0];
+    const tempat = { MAKKAH: ' di Makkah', MADINAH: ' di Madinah' }[top] || '';
+    return { title: 'Hari ke-' + dayNo + tempat, body: 'Jadual hari ini: ' + UmrahService.jadualText(acts) + '.', pending: 0 };
+  },
+
   /**
-   * Dijalankan oleh pencetus harian ~08:00. Idempoten untuk hari yang sama (last_peringatan).
+   * Dijalankan oleh pencetus harian. Idempoten untuk hari yang sama (last_peringatan).
+   *   mode 'pre'  (~08:00 MYT): kiraan hari & persiapan belum siap, H-30 … hari berlepas
+   *   mode 'trip' (~13:00 MYT = 08:00 Makkah): "Hari ke-N" + aktiviti Jadual hari ini, selepas berlepas
    * @param {string=} todayKey untuk ujian; lalai hari ini (zon waktu skrip)
    */
-  sendReminders: function (todayKey) {
-    const out = { checked: 0, sent: 0 };
+  sendReminders: function (todayKey, mode) {
+    const m = mode === 'trip' ? 'trip' : 'pre';
+    const out = { checked: 0, sent: 0, mode: m };
     if (!SettingsService.get('UMRAH_PERINGATAN_AKTIF')) return Object.assign(out, { disabled: true });
     const today = todayKey || DateUtils.dayKey(new Date());
     const patch = {};
@@ -463,11 +490,20 @@ const UmrahService = {
       if (!p.tarikh_berlepas || !UmrahService.peringatanOn(p) || p.last_peringatan === today) return;
       out.checked++;
       const n = UmrahService.dayDiff(today, p.tarikh_berlepas);
-      if (!UmrahService.isReminderDay(n)) return;
+      let msg = null;
+      if (m === 'pre') {
+        if (!UmrahService.isReminderDay(n)) return;
+        msg = UmrahService.reminderFor(p.user_id, today, p.tarikh_berlepas);
+        const acts = n === 0 ? UmrahService.jadualOn(p.user_id, today) : [];
+        if (acts.length) msg.body += ' Jadual hari ini: ' + UmrahService.jadualText(acts) + '.';
+      } else {
+        if (n >= 0 || n < -60) return;
+        msg = UmrahService.tripReminderFor(p.user_id, today, p.tarikh_berlepas);
+        if (!msg) return;
+      }
       const user = UserRepository.findById(p.user_id);
       if (!user || user.status !== USER_STATUS.ACTIVE) return;
-      const msg = UmrahService.reminderFor(p.user_id, today, p.tarikh_berlepas);
-      NotificationService.notify(p.user_id, NOTIF_TYPE.UMRAH_REMINDER, msg.title, msg.body, '', '#/umrah');
+      NotificationService.notify(p.user_id, NOTIF_TYPE.UMRAH_REMINDER, msg.title, msg.body, '', '#/umrah' + (m === 'trip' ? '?tab=jadual' : ''));
       patch[p.user_id] = { last_peringatan: today };
       out.sent++;
     });
@@ -490,7 +526,9 @@ const UmrahService = {
     SecurityService.rateLimit('umrah.test', ctx.userId);
     const berlepas = UmrahService.berlepas(ctx.userId);
     if (!berlepas) throw Errors.validation('Tetapkan tarikh berlepas dahulu.');
-    const msg = UmrahService.reminderFor(ctx.userId, DateUtils.dayKey(new Date()), berlepas);
+    const today = DateUtils.dayKey(new Date());
+    const msg = (UmrahService.dayDiff(today, berlepas) < 0 && UmrahService.tripReminderFor(ctx.userId, today, berlepas)) ||
+      UmrahService.reminderFor(ctx.userId, today, berlepas);
     NotificationService.notify(ctx.userId, NOTIF_TYPE.UMRAH_REMINDER, msg.title, msg.body, '', '#/umrah');
     UmrahService.ensureReminderTriggerSafe();
     return { title: msg.title, body: msg.body, devices: PushTokenRepository.activeByUser(ctx.userId).length, pushEnabled: PushService.enabled() };
@@ -501,12 +539,20 @@ const UmrahService = {
     try { return UmrahService.ensureReminderTrigger(false); } catch (e) { AppLogger.warn('Pencetus peringatan gagal dipasang', { error: String(e && e.message || e) }); return { installed: false }; }
   },
 
-  /** Pasang pencetus umrahReminder (~08:00) jika belum wujud. force = pasang semula. */
+  /** Pencetus peringatan: umrahReminder ~08:00 MYT (sebelum berlepas), umrahReminderTrip ~13:00 MYT = 08:00 Makkah. */
+  REMINDER_TRIGGERS: function () { return [['umrahReminder', 8], ['umrahReminderTrip', 13]]; },
+
+  /** Pasang pencetus peringatan yang belum wujud. force = pasang semula semua. */
   ensureReminderTrigger: function (force) {
-    const existing = ScriptApp.getProjectTriggers().filter(function (t) { return t.getHandlerFunction() === 'umrahReminder'; });
-    if (existing.length && !force) return { installed: false };
-    existing.forEach(function (t) { ScriptApp.deleteTrigger(t); });
-    ScriptApp.newTrigger('umrahReminder').timeBased().everyDays(1).atHour(8).create();
-    return { installed: true };
+    let installed = 0;
+    const all = ScriptApp.getProjectTriggers();
+    UmrahService.REMINDER_TRIGGERS().forEach(function (t) {
+      const existing = all.filter(function (x) { return x.getHandlerFunction() === t[0]; });
+      if (existing.length && !force) return;
+      existing.forEach(function (x) { ScriptApp.deleteTrigger(x); });
+      ScriptApp.newTrigger(t[0]).timeBased().everyDays(1).atHour(t[1]).create();
+      installed++;
+    });
+    return { installed: installed > 0, count: installed };
   }
 };

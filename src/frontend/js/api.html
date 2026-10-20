@@ -109,7 +109,7 @@
   }
 
   /* Baris gilir tulisan luar talian (hanya tindakan idempoten: tanda senarai semak). Dihantar apabila kembali dalam talian. */
-  const QUEUEABLE = ['umrah.semak.toggle'];
+  const QUEUEABLE = ['umrah.semak.toggle', 'doa.markPrayed'];
   function queueGet() { try { return JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]'); } catch (e) { return []; } }
   function queueSave(q) { try { if (q.length) localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); else localStorage.removeItem(QUEUE_KEY); } catch (e) { /* abaikan */ } }
   /** Seperti call(), tetapi jika luar talian tindakan disimpan dan dihantar kemudian. @return {{queued:boolean, data:*}} */
@@ -141,6 +141,27 @@
     return sent;
   }
   const queueSize = () => queueGet().length;
+
+  /** Tindih "telah dibacakan" yang masih beratur pada senarai doa (cache atau terkini). */
+  function overlayDoas(d) {
+    const ids = queueGet().filter((x) => x.action === 'doa.markPrayed' && x.user === userKey()).map((x) => x.payload.id);
+    if (!ids.length || !d || !d.items) return d;
+    return Object.assign({}, d, { items: d.items.map((x) => (ids.indexOf(x.id) >= 0 ? Object.assign({}, x, { isPrayed: true, canMarkPrayed: false, prayedQueued: true, prayedAt: x.prayedAt || new Date().toISOString() }) : x)) });
+  }
+
+  /** Rangkaian dahulu; jika luar talian, guna salinan tersimpan (cth. senarai doa untuk mod baca di Tanah Suci). */
+  async function callCached(action, payload) {
+    try {
+      const d = await call(action, payload);
+      cacheSet(action, payload, d);
+      return action === 'doa.list' ? overlayDoas(d) : d;
+    } catch (err) {
+      const hit = err.code === 'NETWORK' ? cacheGet(action, payload) : null;
+      if (!hit) throw err;
+      noteOffline(hit.t);
+      return action === 'doa.list' ? overlayDoas(hit.d) : hit.d;
+    }
+  }
   window.addEventListener('online', () => { flushQueue(); });
 
   KD.api = {
@@ -154,6 +175,7 @@
     flushQueue,
     queueSize,
     queueItems: () => queueGet(),
+    callCached,
     getHome: () => call('user.home'),
     ApiError,
     // Awam
@@ -172,7 +194,7 @@
     updateProfile: (p) => call('user.updateProfile', p),
     getDashboard: () => call('user.dashboard'),
     // Doa
-    getDoas: (filters) => call('doa.list', filters),
+    getDoas: (filters) => callCached('doa.list', filters),
     getDoa: (id) => call('doa.get', { id }),
     createDoa: (p) => call('doa.create', p),
     updateDoa: (id, p) => call('doa.update', Object.assign({ id }, p)),
