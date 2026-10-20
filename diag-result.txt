@@ -1,0 +1,24 @@
+Tue Oct 20 07:51:49 UTC 2026
+=== public.config
+http=200 time=2.275547s url=https://script.googleusercontent.com/macros/echo?user_content_key=AUkAhnRbJ_Xx909vgrX6c_aEjjtkkOxgHHq94_2glOhWSFT7XqCsVMeKTbXKodxORPORrkR96VA1doJHLi0FmXyKrwPsS5ThH5Mpt1yJZevDBYwuIaL5Kyu6RC3pHHomLcmTi881VTEaOcmtwG5OwMpDKCSMWwGaYzggxMeGZ5BzguCBaITJcll1GDkJpHbsqCbqKrP4qbM9n7QBHOiccTQKU6nAv9dpVw8E31RBvxXz-Dd9-Tla2eHOsVXy8CcqBP59GqOk3bPjfnfgh_VOcKnbGdT3bJlgVw&lib=M2vY_7e0ME8_rS6VptQsRtB_mdlfhbD35
+{"success":true,"data":{"SYSTEM_NAME":"Kirim Doa","SYSTEM_TAGLINE":"Doa anda, cahaya hati","LANDING_MESSAGE":"Anda bakal jemaah Haji/Umrah? Daftar dan agihkan pautan anda kepada orang tersayang sebelum berangkat ke Tanah Suci.","ORG_NAME":"","ALLOW_REGISTRATION":true,"ALLOW_ANONYMOUS":true,"ALLOW_PUBLIC_SUBMISSION":true,"MAINTENANCE_MODE":false,"MAX_ATTACHMENT_MB":5,"MAX_ATTACHMENTS_PER_DOA":3,"ALLOWED_MIME_TYPES":"image/jpeg,image/png,image/webp,application/pdf,audio/mpeg,audio/mp4,audio/x-m4a","DOA_MIN_LENGTH":10,"DOA_MAX_LENGTH":2000,"DEFAULT_PAGE_SIZE":20,"KADAR_SAR_RM":"1.18","VERSION":"1
+
+=== public.config+rid
+http=200 time=1.694727s url=https://script.googleusercontent.com/macros/echo?user_content_key=AUkAhnSo9ib6Zb_64d3ZsE983O9jyK0iXQgNnDZ6pQFpAz-smdCfDYCks9yW7LSGx__muRzZwsV0HXtQ1d6qz2o5-X6pZD0o1Ybj4cds15faJY4tQAZK8U_UktHsOTSWQ-rZm4houYMra3sf1hke96ULqADu_19tgGfIr5IJzwkNjmgd_qiNZ6dFIkliKUKxqDqJ6xSQm_mJsoqxYTJBQ-ZBYsl3EBtQ0dhRFTrBBXYBvbbhAB0su0CYRC8sRky5FLx58UtURHldMzy36J8KJj8RPCWG5_uOcA&lib=M2vY_7e0ME8_rS6VptQsRtB_mdlfhbD35
+{"success":true,"data":{"SYSTEM_NAME":"Kirim Doa","SYSTEM_TAGLINE":"Doa anda, cahaya hati","LANDING_MESSAGE":"Anda bakal jemaah Haji/Umrah? Daftar dan agihkan pautan anda kepada orang tersayang sebelum berangkat ke Tanah Suci.","ORG_NAME":"","ALLOW_REGISTRATION":true,"ALLOW_ANONYMOUS":true,"ALLOW_PUBLIC_SUBMISSION":true,"MAINTENANCE_MODE":false,"MAX_ATTACHMENT_MB":5,"MAX_ATTACHMENTS_PER_DOA":3,"ALLOWED_MIME_TYPES":"image/jpeg,image/png,image/webp,application/pdf,audio/mpeg,audio/mp4,audio/x-m4a","DOA_MIN_LENGTH":10,"DOA_MAX_LENGTH":2000,"DEFAULT_PAGE_SIZE":20,"KADAR_SAR_RM":"1.18","VERSION":"1
+
+=== public.config+rid ulang
+http=200 time=1.275911s url=https://script.googleusercontent.com/macros/echo?user_content_key=AUkAhnT1KxJVsEIW025dCewR1Sufzoj1Gdin9NnoY2djx0q6fnogOpBAEfVuenm5tZf24Ie4sDzwO6xxYSLT4rpliVPvBl69lOlPWRLwTtz6JVogrTYaE2ubQPjJ5vlNKi-g_ScQQAX5M4272NUXQ_KBFdh4pbffAAZzFicmvLgK9spgS8AouCVddENs_EfGW_ncPYYxbwarkPGgf4XI6l45U8GDSw9M5IuSm-ggQ21cB7smTRMmh80TsMJ9QKW682jujl7vKc35Yq5vZkt-0jj0AZ0CfDf5rg&lib=M2vY_7e0ME8_rS6VptQsRtB_mdlfhbD35
+{"success":true,"data":{"SYSTEM_NAME":"Kirim Doa","SYSTEM_TAGLINE":"Doa anda, cahaya hati","LANDING_MESSAGE":"Anda bakal jemaah Haji/Umrah? Daftar dan agihkan pautan anda kepada orang tersayang sebelum berangkat ke Tanah Suci.","ORG_NAME":"","ALLOW_REGISTRATION":true,"ALLOW_ANONYMOUS":true,"ALLOW_PUBLIC_SUBMISSION":true,"MAINTENANCE_MODE":false,"MAX_ATTACHMENT_MB":5,"MAX_ATTACHMENTS_PER_DOA":3,"ALLOWED_MIME_TYPES":"image/jpeg,image/png,image/webp,application/pdf,audio/mpeg,audio/mp4,audio/x-m4a","DOA_MIN_LENGTH":10,"DOA_MAX_LENGTH":2000,"DEFAULT_PAGE_SIZE":20,"KADAR_SAR_RM":"1.18","VERSION":"1
+
+=== umrah.semak.list tanpa token
+http=200 time=1.222627s url=https://script.googleusercontent.com/macros/echo?user_content_key=AUkAhnTGe9tk3QuShQ47cWKgTvGPkQ8AsHyLXfiG3Y9nq6CXgdMbiOepR3UrO-96ZKr5zArAQTqwJ5hC3dpSu63NMQZF4Q91AxHVdRSeHggPtteUEauMGXuYQia9lU7BfkakHDzQu1ULvI_xErfYgZhTfVqVuvt4CbUfanak1zIqOUDuQSnzHzMUp5b_KxHPynLyIdmpzcRUJrFce8niZkuHstqyILtIgXy7qJAfNedPBDYIsXtGfH8JYdWzSQWBPujES4M41g8S0tqVCbSw6bA15WyOdAyXkA&lib=M2vY_7e0ME8_rS6VptQsRtB_mdlfhbD35
+{"success":false,"data":null,"message":"Sesi anda telah tamat. Sila log masuk semula.","code":"UNAUTHENTICATED","meta":{"ms":2}}
+
+=== public.categories
+http=200 time=1.100989s url=https://script.googleusercontent.com/macros/echo?user_content_key=AUkAhnS4-Q0pJLn29PiOlKXRTKlm229oCRUjbrCYJxEg9N1QTnA-MN0_j0Cg64_XQXek7NGXDNIG0PuivxO5Uz-p4SYQ4ZOuItclwwhBZeYYFJKAIZVzgfKY6mD30J6MsRk426wz67HBQPANbYLEBEzt9Vhw7RDxILo-TmXTOheLvyc2Ze35xdxbWFl7o707BRus4dUSZjEZZVP2tNDXkf7Txiu4FSeYKJVsnbuKHOAGTVVZfjUnIjYgkaZiy9CBHcBUMfukzXwSPUkYwpItPVr25d6K90-6lQ&lib=M2vY_7e0ME8_rS6VptQsRtB_mdlfhbD35
+{"success":true,"data":[{"id":"C-558AA01A012119EA","nameMs":"Umum","nameEn":"General","description":"Doa umum","icon":"hands","sortOrder":5,"status":"ACTIVE"}],"message":"","code":"OK","meta":{"ms":75}}
+
+=== GET
+http=200
+<title>Kirim Doa — Doa anda, cahaya hati
