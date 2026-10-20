@@ -2139,11 +2139,11 @@ window.KD = window.KD || {};
   };
 
   // ---------------------------------------------------------------- Notifikasi
-  const NOTIF_ICON = { WELCOME: 'sparkle', DOA_RECEIVED: 'inbox', DOA_PRAYED: 'hands', BROADCAST: 'bell', SECURITY: 'lock', ACCOUNT: 'user' };
+  const NOTIF_ICON = { WELCOME: 'sparkle', DOA_RECEIVED: 'inbox', DOA_PRAYED: 'hands', BROADCAST: 'bell', SECURITY: 'lock', ACCOUNT: 'user', UMRAH_REMINDER: 'kaaba' };
   KD.views.notifications = {
     async render(el) {
       let page = 1;
-      el.innerHTML = html`<div class="page-head"><div><h1>Notifikasi</h1><p>Doa baharu dan makluman akaun anda.</p></div><button class="btn btn-outline" data-act="all">${icon('check')}Tandakan semua dibaca</button></div><section class="panel panel-flush" data-box>${skeletonList(4)}</section>`.s;
+      el.innerHTML = html`<div class="page-head"><div><h1>Notifikasi</h1><p>Doa baharu, peringatan Umrah dan makluman akaun anda.</p></div><button class="btn btn-outline" data-act="all">${icon('check')}Tandakan semua dibaca</button></div><section class="panel panel-flush" data-box>${skeletonList(4)}</section>`.s;
       const load = async () => {
         const box = qs('[data-box]', el);
         try {
@@ -2162,6 +2162,7 @@ window.KD = window.KD || {};
         }
         const ref = b.getAttribute('data-ref');
         if (/^DOA_(RECEIVED|PRAYED)$/.test(b.getAttribute('data-type')) && ref) openDoa(ref);
+        else if (b.getAttribute('data-type') === 'UMRAH_REMINDER') KD.router.go('/umrah');
       });
       on(el, 'click', '[data-act="all"]', async (e, b) => busy(b, async () => { try { await api.markAllNotificationsRead(); KD.app.setUnread(0); toast('Semua notifikasi ditandakan dibaca.'); load(); } catch (err) { toastError(err); } }));
       on(el, 'click', '[data-page]', (e, b) => { page = Number(b.getAttribute('data-page')); load(); });
@@ -2300,7 +2301,8 @@ window.KD = window.KD || {};
           <div class="um-trip__body"><span class="um-trip__label">Tarikh berlepas</span>
             ${dep ? html`<span class="um-trip__date" data-berlepas>${fmtDate(dep)}</span><span class="um-trip__count">${countdown(dep)}</span>`
               : html`<span class="um-trip__date">Belum ditetapkan</span><span class="small muted">Tetapkan untuk tarikh sasaran automatik.</span>`}</div>
-          <button class="btn ${dep ? 'btn-outline' : 'btn-primary'} btn-sm" data-act="berlepas">${icon(dep ? 'edit' : 'calendar', 'i-sm')}${dep ? 'Ubah' : 'Tetapkan'}</button></section>
+          <button class="btn ${dep ? 'btn-outline' : 'btn-primary'} btn-sm" data-act="berlepas">${icon(dep ? 'edit' : 'calendar', 'i-sm')}${dep ? 'Ubah' : 'Tetapkan'}</button>
+          ${dep ? remindRow() : ''}</section>
         <section class="panel um-hero"><div class="um-hero__pct">${pct}%</div><div class="um-hero__body"><strong>${fmtNum(data.done)} daripada ${fmtNum(items.length)} perkara siap</strong>
           <div class="um-track" role="progressbar" aria-label="Kemajuan persiapan" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></div></div>
           <button class="btn btn-outline btn-sm" data-act="add">${icon('plus', 'i-sm')}Tambah item</button></section>
@@ -2331,6 +2333,35 @@ window.KD = window.KD || {};
           data.tarikhBerlepas ? 'Tarikh ini ikut beranjak jika tarikh berlepas diubah.' : '')}
         ${field('s-catatan', 'Catatan', html`<textarea class="textarea" id="s-catatan" name="catatan" maxlength="500" style="min-height:80px">${i ? i.catatan : ''}</textarea>`)}`
     });
+    /** Baris peringatan harian dalam bar tarikh berlepas. */
+    const remindRow = () => {
+      const ps = KD.pwa && KD.pwa.pushState ? KD.pwa.pushState() : 'unconfigured';
+      const push = ps === 'on' ? html`<span class="um-remind__push">${icon('check', 'i-sm')} Notifikasi telefon hidup</span>`
+        : ps === 'unconfigured' || ps === 'unsupported' ? html`<span class="small muted">Notifikasi dalam app</span>`
+        : html`<button class="btn btn-primary btn-sm" data-act="push-on">${icon('bell', 'i-sm')}Hidupkan notifikasi telefon</button>`;
+      return html`<div class="um-remind">
+        <label class="check"><input type="checkbox" data-remind ${data.peringatan !== false ? raw('checked') : ''}>
+          <span><b>Peringatan harian (8 pagi)</b><span class="small muted">Kiraan hari ke Tanah Suci dan persiapan belum siap: H-30, H-21, H-14, kemudian setiap hari dari H-7.</span></span></label>
+        <div class="row row-wrap" style="gap:var(--sp-2)">${push}<button class="btn btn-ghost btn-sm" data-act="remind-test">${icon('bell', 'i-sm')}Cuba sekarang</button></div>
+      </div>`;
+    };
+    on(box, 'change', '[data-remind]', async (e, cb) => {
+      cb.disabled = true;
+      try {
+        const r = await call('umrah.peringatan.set', { aktif: cb.checked });
+        data.peringatan = r.peringatan;
+        toast(r.peringatan ? 'Peringatan harian dihidupkan.' : 'Peringatan harian dimatikan.');
+      } catch (err) { cb.checked = !cb.checked; toastError(err); }
+      cb.disabled = false;
+    });
+    on(box, 'click', '[data-act="push-on"]', async () => { if (KD.pwa && KD.pwa.enablePush) await KD.pwa.enablePush(); draw(); });
+    on(box, 'click', '[data-act="remind-test"]', (e, b) => busy(b, async () => {
+      try {
+        const r = await call('umrah.peringatan.test');
+        toast(r.title + '. ' + (r.pushEnabled && r.devices ? 'Dihantar ke telefon dan Notifikasi.' : 'Dihantar ke Notifikasi dalam app.'));
+        if (KD.app && KD.app.refreshUnread) KD.app.refreshUnread();
+      } catch (err) { toastError(err); }
+    }));
     const berlepasForm = () => {
       const lama = data.tarikhBerlepas;
       const m = modal({ title: lama ? 'Ubah tarikh berlepas' : 'Tetapkan tarikh berlepas',
