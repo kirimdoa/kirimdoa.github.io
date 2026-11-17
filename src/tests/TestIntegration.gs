@@ -315,6 +315,20 @@ const TestSuiteRecipient = {
       t.ok(self.isMine && self.canMarkPrayed && !self.senderNotifiable);
       t.eq(TestAssert.apiOk(TestHelpers.call(owner.token, 'doa.markPrayed', { id: self.id })).notified, '');
     }],
+    ['Ucapan pengirim: disimpan, dilihat penerima, dihadkan panjang', function (t) {
+      const owner = TestHelpers.user('ucap');
+      const link = TestAssert.apiOk(TestHelpers.call(owner.token, 'recipient.create', { displayName: 'Pak Long', title: 'Doakan umrah saya', occasion: 'UMRAH' }));
+      const msg = 'Selamat menunaikan umrah dan semoga dipermudahkan segala urusan di sana.';
+      TestAssert.apiFail(api({ action: 'recipient.submit', payload: { code: link.code, senderName: 'Siti', doaText: 'Semoga umrah mabrur.', senderMessage: new Array(CONFIG.SENDER_MESSAGE_MAX + 2).join('a'), formToken: TestHelpers.agedFormToken(link.code) } }), ERROR_CODES.VALIDATION_ERROR);
+      TestAssert.apiOk(api({ action: 'recipient.submit', payload: { code: link.code, senderName: 'Siti', doaText: 'Semoga umrah mabrur.', senderMessage: msg, formToken: TestHelpers.agedFormToken(link.code) } }));
+      TestAssert.apiOk(api({ action: 'recipient.submit', payload: { code: link.code, senderName: 'Abu', doaText: 'Semoga selamat pergi dan pulang.', formToken: TestHelpers.agedFormToken(link.code) } }));
+      const items = TestAssert.apiOk(TestHelpers.call(owner.token, 'doa.list', { scope: 'RECEIVED', full: true })).items;
+      const siti = items.filter(function (x) { return x.senderName === 'Siti'; })[0];
+      const abu = items.filter(function (x) { return x.senderName === 'Abu'; })[0];
+      t.eq(siti.senderMessage, msg);
+      t.eq(abu.senderMessage, '');
+      t.eq(TestAssert.apiOk(TestHelpers.call(owner.token, 'doa.get', { id: siti.id })).senderMessage, msg);
+    }],
     ['Telah dibacakan: email pilihan pengirim awam dihantar sekali & dipadam', function (t) {
       const owner = TestHelpers.user('praye');
       const link = TestAssert.apiOk(TestHelpers.call(owner.token, 'recipient.create', { displayName: 'Mak Cik', title: 'Doakan haji saya', occasion: 'HAJI' }));

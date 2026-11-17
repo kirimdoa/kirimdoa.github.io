@@ -17,7 +17,7 @@ function copyrightLine() {
 const CONFIG = Object.freeze({
   APP_NAME: 'Titipan Hati',
   TAGLINE: 'Titipkan doa, kami sampaikan',
-  VERSION: '2.3.1',
+  VERSION: '2.4.0',
   // Hak cipta sistem (dipaparkan di laman awam, aplikasi, PDF & email)
   COPYRIGHT_OWNER: 'Zaki',
   COPYRIGHT_SINCE: 2026,
@@ -63,6 +63,7 @@ const CONFIG = Object.freeze({
   EXPORT_MAX_DOAS: 300,
   TITLE_MAX: 120,
   NAME_MAX: 80,
+  SENDER_MESSAGE_MAX: 300, // ucapan pengirim kepada penerima pautan Kumpul Doa
   MESSAGE_MAX: 500,
   FEEDBACK_MAX: 1500,
 

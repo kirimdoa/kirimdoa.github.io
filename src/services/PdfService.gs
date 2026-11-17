@@ -28,6 +28,7 @@ const PdfService = {
         '<div class="meta">' + (i + 1) + '. ' + e(d.categoryName) + ' · ' + e(DateUtils.format(d.createdAt, 'dd MMM yyyy')) + '</div>' +
         (d.title ? '<h3>' + e(d.title) + '</h3>' : '') +
         '<p class="text">' + StringUtils.escapeMultiline(d.text) + '</p>' +
+        (d.senderMessage ? '<p class="msg">Ucapan: ' + StringUtils.escapeMultiline(d.senderMessage) + '</p>' : '') +
         '<div class="from">Daripada: ' + e(d.senderName + (d.isMine ? ' (anda)' : '')) + ' · Untuk: ' + e(d.recipientType === RECIPIENT_TYPE.SELF ? 'Diri sendiri' : d.recipientName) +
           (d.isPrayed ? ' · ✓ Telah dibacakan' : '') + '</div>' +
         '</div>';
@@ -41,6 +42,7 @@ const PdfService = {
       '.doa{border:1px solid #EBDCEC;border-left:4px solid #682C86;border-radius:6px;padding:10px 14px;margin:0 0 12px;page-break-inside:avoid;}' +
       '.meta{font-size:10px;color:#682C86;text-transform:uppercase;letter-spacing:1px;} h3{font-size:14px;margin:4px 0;color:#4B1027;}' +
       '.text{font-size:13px;line-height:1.6;margin:6px 0;} .from{font-size:11px;color:#746A73;text-align:right;}' +
+      '.msg{font-size:12px;font-style:italic;color:#8A6A2A;background:#FBF4E6;border-radius:4px;padding:6px 10px;margin:6px 0;}' +
       '.foot{margin-top:20px;text-align:center;font-size:10px;color:#746A73;border-top:1px solid #EBDCEC;padding-top:8px;}' +
       '</style></head><body>' +
       '<div class="head"><div class="bismillah">بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</div>' +

@@ -32,6 +32,7 @@ const DoaModel = {
       categoryId: d.category_id,
       categoryName: cat ? cat.name_ms : 'Lain-lain',
       categoryIcon: cat ? cat.icon : 'star',
+      senderMessage: d.sender_message || '', // ucapan pengirim kepada penerima
       isAnonymous: d.is_anonymous,
       senderName: senderLabel,
       source: d.source,

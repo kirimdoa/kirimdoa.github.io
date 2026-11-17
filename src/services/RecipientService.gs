@@ -126,6 +126,7 @@ const RecipientService = {
       title: { type: 'string', max: CONFIG.TITLE_MAX, label: 'Tajuk' },
       doaText: { type: 'text', required: true, min: settings.DOA_MIN_LENGTH, max: settings.DOA_MAX_LENGTH, label: 'Isi doa' },
       isAnonymous: { type: 'boolean', default: false },
+      senderMessage: { type: 'text', max: CONFIG.SENDER_MESSAGE_MAX, label: 'Ucapan' }, // pilihan — ucapan kepada penerima
       senderEmail: { type: 'email', label: 'Email' }, // pilihan — hanya untuk makluman "telah dibacakan"
       senderPhone: { type: 'string', max: 25, label: 'No. WhatsApp' }, // pilihan — butang WhatsApp pemilik pautan
       formToken: { type: 'string', required: true, max: 60, label: 'Token' },
@@ -171,6 +172,7 @@ const RecipientService = {
         category_id: categoryId,
         title: data.title || '',
         doa_text: data.doaText,
+        sender_message: data.senderMessage || '',
         is_anonymous: !!data.isAnonymous,
         status: DOA_STATUS.ACTIVE,
         visibility: VISIBILITY.PRIVATE,

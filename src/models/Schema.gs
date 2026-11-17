@@ -33,7 +33,9 @@ const SCHEMA = Object.freeze({
       // 1.2.0: tanda "telah dibacakan" + email pilihan pengirim awam (dipadam selepas makluman dihantar)
       'prayed_at', 'sender_email',
       // 1.3.0: no. WhatsApp pilihan pengirim (hanya dilihat oleh pemilik pautan untuk butang WhatsApp)
-      'sender_phone'],
+      'sender_phone',
+      // 2.4.0: ucapan pilihan pengirim kepada penerima (cth. "Selamat menunaikan umrah")
+      'sender_message'],
     types: { is_anonymous: 'bool', attachment_count: 'int' }
   },
   CATEGORIES: {
