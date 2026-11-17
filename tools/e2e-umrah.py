@@ -1,5 +1,5 @@
 """
-e2e-umrah.py — E2E Planner Umrah dalam Kirim Doa (telefon 360px + desktop), serta regresi halaman sedia ada.
+e2e-umrah.py — E2E Planner Umrah dalam Titipan Hati (telefon 360px + desktop), serta regresi halaman sedia ada.
 Dev server mesti berjalan (node tools/dev-server.js --seed). Tangkapan skrin: e2e-shots/kd-*.png
 """
 from playwright.sync_api import sync_playwright
@@ -108,4 +108,4 @@ with sync_playwright() as p:
 
     assert not errs, 'Ralat JS: ' + '; '.join(errs)
     b.close()
-print('\nE2E Planner Umrah (Kirim Doa) lulus.')
+print('\nE2E Planner Umrah (Titipan Hati) lulus.')

@@ -2,7 +2,7 @@
  * @file DriveService.gs
  * Storan lampiran dalam Google Drive.
  *
- * Struktur:  Kirim Doa / Attachments / YYYY / MM / <doaId>__<nama fail>
+ * Struktur:  Titipan Hati / Attachments / YYYY / MM / <doaId>__<nama fail>
  * Keselamatan: fail & folder PERIBADI (pemilik skrip sahaja). Pengguna mengakses lampiran
  * melalui DoaService.getAttachment() selepas semakan akses — tiada pautan Drive awam.
  */
@@ -50,7 +50,7 @@ const DriveService = {
       // Sesetengah polisi domain menghalang setSharing; fail kekal mengikut lalai folder (peribadi).
       AppLogger.warn('setSharing gagal', { error: String(e) });
     }
-    created.setDescription('Kirim Doa · ' + doaId);
+    created.setDescription('Titipan Hati · ' + doaId);
     return { id: created.getId(), size: created.getSize() };
   },
 
@@ -70,7 +70,7 @@ const DriveService = {
   ensureFolders: function () {
     let root = Env.get('DRIVE_ROOT_FOLDER_ID') ? DriveService.safeFolder(Env.get('DRIVE_ROOT_FOLDER_ID')) : null;
     if (!root) {
-      root = DriveApp.createFolder('Kirim Doa');
+      root = DriveApp.createFolder('Titipan Hati');
       Env.set('DRIVE_ROOT_FOLDER_ID', root.getId());
     }
     let att = Env.get('ATTACHMENT_FOLDER_ID') ? DriveService.safeFolder(Env.get('ATTACHMENT_FOLDER_ID')) : null;
@@ -80,7 +80,7 @@ const DriveService = {
     }
     let backup = Env.get('BACKUP_FOLDER_ID') ? DriveService.safeFolder(Env.get('BACKUP_FOLDER_ID')) : null;
     if (!backup) {
-      backup = DriveApp.createFolder('Kirim Doa Backup');
+      backup = DriveApp.createFolder('Titipan Hati Backup');
       Env.set('BACKUP_FOLDER_ID', backup.getId());
     }
     [root, att, backup].forEach(function (f) {

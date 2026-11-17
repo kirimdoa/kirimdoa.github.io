@@ -54,7 +54,7 @@
     { path: '/log-masuk', view: 'login', access: 'guest', layout: 'public', title: 'Log Masuk' },
     { path: '/daftar', view: 'register', access: 'guest', layout: 'public', title: 'Daftar Baru' },
     { path: '/lupa-kata-laluan', view: 'forgot', access: 'guest', layout: 'public', title: 'Lupa Kata Laluan' },
-    { path: '/k/:code', view: 'collect', access: 'public', layout: 'public', title: 'Kirim Doa' },
+    { path: '/k/:code', view: 'collect', access: 'public', layout: 'public', title: 'Titipan Hati' },
 
     { path: '/utama', view: 'dashboard', access: 'user', layout: 'app', title: 'Utama' },
     { path: '/hantar', view: 'compose', access: 'user', layout: 'app', title: 'Hantar Doa' },
@@ -138,7 +138,7 @@
       router.current = { route: r, params: found.params, query: parseQuery(path), path };
       const view = KD.views[r.view];
       const container = KD.app.mount(r);
-      document.title = (r.title ? r.title + ' — ' : '') + ((KD.config && KD.config.SYSTEM_NAME) || 'Kirim Doa');
+      document.title = (r.title ? r.title + ' — ' : '') + ((KD.config && KD.config.SYSTEM_NAME) || 'Titipan Hati');
       syncTop(path);
       window.scrollTo(0, 0);
       try {
@@ -208,16 +208,16 @@
       const nav = app.navItems(mode);
       qs('#root').innerHTML = html`<div class="shell">
         <aside class="sidebar" aria-label="Navigasi utama">
-          <a class="side-brand" href="#${mode === 'admin' ? '/admin' : '/utama'}">${star()}<span class="side-brand__name">${(KD.config && KD.config.SYSTEM_NAME) || 'Kirim Doa'}</span>${mode === 'admin' ? html`<span class="badge badge-gold">Pentadbir</span>` : ''}</a>
+          <a class="side-brand" href="#${mode === 'admin' ? '/admin' : '/utama'}">${star()}<span class="side-brand__name">${(KD.config && KD.config.SYSTEM_NAME) || 'Titipan Hati'}</span>${mode === 'admin' ? html`<span class="badge badge-gold">Pentadbir</span>` : ''}</a>
           <nav class="side-nav">${nav.map((n) => html`<a class="side-link" href="#${n[0]}" data-nav="${n[0]}">${icon(n[1])}<span>${n[2]}</span>${n[0] === '/notifikasi' ? html`<span class="badge-dot hidden" data-unread-dot></span>` : ''}</a>`)}</nav>
           ${auth.isAdmin() ? html`<div class="side-section">${mode === 'admin' ? 'Aplikasi' : 'Pentadbiran'}</div>
             <nav class="side-nav">${mode === 'admin' ? html`<a class="side-link" href="#/utama">${icon('home')}<span>Kembali ke aplikasi</span></a>` : html`<a class="side-link" href="#/admin">${icon('shield')}<span>Panel pentadbir</span></a>`}</nav>` : ''}
-          <div class="side-foot"><button class="side-link" style="width:100%" data-act="logout">${icon('logout')}<span>Log Keluar</span></button></div>
+          <div class="side-foot"><button class="side-link" style="width:100%" data-act="logout">${icon('logout')}<span>Log Keluar</span></button><div class="copyright side-copyright">${KD.ui.copyright()}</div></div>
         </aside>
         <div class="main">
           <header class="topbar">
             <button class="icon-btn hide-desktop" data-act="menu" aria-label="Menu">${icon('menu')}</button>
-            <a class="topbar__brand" href="#/utama">${star()}<span>${(KD.config && KD.config.SYSTEM_NAME) || 'Kirim Doa'}</span></a>
+            <a class="topbar__brand" href="#/utama">${star()}<span>${(KD.config && KD.config.SYSTEM_NAME) || 'Titipan Hati'}</span></a>
             <div class="topbar__title" data-title></div>
             <div class="topbar__actions">
               <a class="icon-btn" href="#/notifikasi" aria-label="Notifikasi">${icon('bell')}<span class="count-pill hidden" data-unread-count></span></a>

@@ -5,8 +5,8 @@
  * `public: true` → didedahkan kepada frontend (tiada rahsia di sini).
  */
 const SETTINGS_DEFS = Object.freeze({
-  SYSTEM_NAME: { type: 'string', default: 'Kirim Doa', max: 60, minRole: 'ADMIN', public: true, description: 'Nama sistem' },
-  SYSTEM_TAGLINE: { type: 'string', default: 'Doa anda, cahaya hati', max: 120, minRole: 'ADMIN', public: true, description: 'Slogan' },
+  SYSTEM_NAME: { type: 'string', default: 'Titipan Hati', max: 60, minRole: 'ADMIN', public: true, description: 'Nama sistem' },
+  SYSTEM_TAGLINE: { type: 'string', default: 'Titipkan doa, kami sampaikan', max: 120, minRole: 'ADMIN', public: true, description: 'Slogan' },
   LANDING_MESSAGE: {
     type: 'text', default: 'Anda bakal jemaah Haji/Umrah? Daftar dan agihkan pautan anda kepada orang tersayang sebelum berangkat ke Tanah Suci.',
     max: 400, minRole: 'ADMIN', public: true, description: 'Mesej halaman utama'

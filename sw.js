@@ -1,4 +1,4 @@
-/* Kirim Doa — service worker: cache aset statik sahaja.
+/* Titipan Hati — service worker: cache aset statik sahaja.
  * Data doa TIDAK dicache (peribadi & sentiasa daripada pelayan; permintaan API ke Google tidak disentuh).
  * Nama cache & senarai aset diisi oleh tools/build-web.js (pemegang tempat di bawah). */
 var CACHE = "kirimdoa-2.1.0-34fbe2c0ac";

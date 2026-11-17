@@ -85,7 +85,7 @@ function setupDatabase() {
   requireOwner_();
   const report = {};
   if (!Env.get('SPREADSHEET_ID')) {
-    const ss = SpreadsheetApp.create('Kirim Doa — Database');
+    const ss = SpreadsheetApp.create('Titipan Hati — Database');
     Env.set('SPREADSHEET_ID', ss.getId());
     report.spreadsheetCreated = ss.getUrl();
   }
@@ -185,7 +185,7 @@ function dailyMaintenance(e) {
 
 /**
  * Semak konfigurasi notifikasi telefon (FCM) dan hantar notifikasi ujian ke peranti pemilik skrip
- * (jika akaun pemilik di Kirim Doa telah menghidupkan notifikasi). Jalankan dari editor selepas
+ * (jika akaun pemilik di Titipan Hati telah menghidupkan notifikasi). Jalankan dari editor selepas
  * menetapkan Script Property FCM_SERVICE_ACCOUNT.
  */
 function testPushConfig() {
@@ -205,11 +205,11 @@ function testPushConfig() {
   const email = Session.getEffectiveUser().getEmail();
   const user = UserRepository.findByEmail ? UserRepository.findByEmail(email) : null;
   if (!user) {
-    console.log('ℹ Tiada akaun Kirim Doa untuk ' + email + ' — ujian penghantaran dilangkau.');
+    console.log('ℹ Tiada akaun Titipan Hati untuk ' + email + ' — ujian penghantaran dilangkau.');
     return { ok: true, sent: 0 };
   }
   const devices = PushTokenRepository.activeByUser(user.user_id).length;
-  const sent = PushService.sendToUser(user.user_id, { title: 'Kirim Doa', body: 'Ujian notifikasi telefon berjaya.', type: 'TEST', path: '#/notifikasi' });
+  const sent = PushService.sendToUser(user.user_id, { title: 'Titipan Hati', body: 'Ujian notifikasi telefon berjaya.', type: 'TEST', path: '#/notifikasi' });
   console.log('Peranti aktif: ' + devices + ' · berjaya dihantar: ' + sent + (devices ? '' : ' (hidupkan notifikasi di Profil pada telefon dahulu)'));
   return { ok: true, devices: devices, sent: sent };
 }

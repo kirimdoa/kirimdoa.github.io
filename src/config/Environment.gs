@@ -5,9 +5,9 @@
  * Kunci Script Properties:
  *   APP_ENV                      DEV | STAGING | PRODUCTION
  *   SPREADSHEET_ID               ID spreadsheet pangkalan data
- *   DRIVE_ROOT_FOLDER_ID         Folder "Kirim Doa"
- *   ATTACHMENT_FOLDER_ID         Folder "Kirim Doa/Attachments"
- *   BACKUP_FOLDER_ID             Folder "Kirim Doa Backup"
+ *   DRIVE_ROOT_FOLDER_ID         Folder "Titipan Hati"
+ *   ATTACHMENT_FOLDER_ID         Folder "Titipan Hati/Attachments"
+ *   BACKUP_FOLDER_ID             Folder "Titipan Hati Backup"
  *   AUTH_PEPPER                  Rahsia untuk hash kata laluan (dijana automatik)
  *   FORM_SECRET                  Rahsia untuk token borang awam (dijana automatik)
  *   PBKDF2_ITERATIONS            (pilihan) bilangan lelaran hash

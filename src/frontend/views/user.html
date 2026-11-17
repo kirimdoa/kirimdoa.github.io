@@ -180,7 +180,7 @@
   KD.views.markPrayed = markPrayed;
 
   async function shareDoa(d) {
-    const text = (d.title ? d.title + '\n\n' : '') + d.text + '\n\n— ' + ((KD.config && KD.config.SYSTEM_NAME) || 'Kirim Doa');
+    const text = (d.title ? d.title + '\n\n' : '') + d.text + '\n\n— ' + ((KD.config && KD.config.SYSTEM_NAME) || 'Titipan Hati');
     if (navigator.share) {
       try { await navigator.share({ text }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
     }
@@ -637,8 +637,8 @@
       const u = KD.auth.user() || {};
       const pwaPanel = KD.pwa && KD.pwa.isWeb() ? html`<section class="panel app-panel" style="margin-bottom:var(--sp-6)"><div class="app-panel__icon"><img src="icons/icon-192.png" alt="" width="48" height="48"></div>
           <div class="grow"><h3>Aplikasi telefon</h3>
-            <p class="small muted hidden" data-pwa-installed>${icon('check', 'i-sm')} Anda sedang menggunakan aplikasi Kirim Doa yang dipasang.</p>
-            <p class="small muted" data-pwa-hint>Pasang Kirim Doa di skrin utama telefon untuk dibuka dengan satu sentuhan — sesuai dibawa ke Tanah Suci.</p></div>
+            <p class="small muted hidden" data-pwa-installed>${icon('check', 'i-sm')} Anda sedang menggunakan aplikasi Titipan Hati yang dipasang.</p>
+            <p class="small muted" data-pwa-hint>Pasang Titipan Hati di skrin utama telefon untuk dibuka dengan satu sentuhan — sesuai dibawa ke Tanah Suci.</p></div>
           <button class="btn btn-gold hidden" data-pwa-install data-act="pwa-install">${icon('download')}Pasang aplikasi</button>
           <div class="push-panel hidden" data-push-panel><div class="grow"><h4>${icon('bell', 'i-sm')} Notifikasi telefon</h4><p class="small muted" data-push-text></p></div>
             <div class="row row-wrap"><button class="btn btn-primary hidden" data-push-on>${icon('bell')}Hidupkan notifikasi</button>

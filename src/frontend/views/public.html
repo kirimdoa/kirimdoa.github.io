@@ -5,22 +5,23 @@
 (function (KD) {
   'use strict';
   const { html, raw, qs, on, formData, fmtNum, requestId } = KD.utils;
-  const { icon, star, skyline, toast, toastError, busy, fieldErrors } = KD.ui;
+  const { icon, star, copyright, skyline, toast, toastError, busy, fieldErrors } = KD.ui;
   const cfg = () => KD.config || {};
 
   const BISMILLAH = 'بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ';
 
   function publicTop(dark) {
     const loggedIn = KD.auth.loggedIn();
-    return html`<header class="public-top"><a class="brand" href="#/">${star()}<span>${cfg().SYSTEM_NAME || 'Kirim Doa'}</span></a>
+    return html`<header class="public-top"><a class="brand" href="#/">${star()}<span>${cfg().SYSTEM_NAME || 'Titipan Hati'}</span></a>
       <nav class="row">${loggedIn
         ? html`<a class="btn ${dark ? 'btn-light' : 'btn-outline'} btn-sm" href="#/utama">Buka aplikasi</a>`
         : html`<a class="btn ${dark ? 'btn-light' : 'btn-ghost'} btn-sm" href="#/log-masuk">Log Masuk</a><a class="btn ${dark ? 'btn-cream' : 'btn-primary'} btn-sm" href="#/daftar">Daftar</a>`}</nav></header>`;
   }
 
   function publicFoot() {
-    return html`<footer class="public-foot"><nav><button class="btn-link" data-scroll="tentang">Tentang ${cfg().SYSTEM_NAME || 'Kirim Doa'}</button><button class="btn-link" data-scroll="panduan">Panduan</button><button class="btn-link" data-scroll="maklum-balas">Maklum Balas</button></nav>
-      <div>${cfg().SYSTEM_NAME || 'Kirim Doa'}: ${cfg().SYSTEM_TAGLINE || ''}${cfg().ORG_NAME ? html`<br>${cfg().ORG_NAME}` : ''}</div></footer>`;
+    return html`<footer class="public-foot"><nav><button class="btn-link" data-scroll="tentang">Tentang ${cfg().SYSTEM_NAME || 'Titipan Hati'}</button><button class="btn-link" data-scroll="panduan">Panduan</button><button class="btn-link" data-scroll="maklum-balas">Maklum Balas</button></nav>
+      <div>${cfg().SYSTEM_NAME || 'Titipan Hati'}: ${cfg().SYSTEM_TAGLINE || ''}${cfg().ORG_NAME ? html`<br>${cfg().ORG_NAME}` : ''}</div>
+      <div class="copyright">${copyright()}</div></footer>`;
   }
 
   function passwordField(name, label, autocomplete, hint) {
@@ -48,14 +49,14 @@
           <div class="hero__arch arch">
             ${star('hero__star')}
             <div class="hero__bismillah arabic" lang="ar">${BISMILLAH}</div>
-            <h1 class="hero__title">${c.SYSTEM_NAME || 'Kirim Doa'}</h1>
-            <p class="hero__tag">${c.SYSTEM_TAGLINE || 'Doa anda, cahaya hati'}</p>
+            <h1 class="hero__title">${c.SYSTEM_NAME || 'Titipan Hati'}</h1>
+            <p class="hero__tag">${c.SYSTEM_TAGLINE || 'Titipkan doa, kami sampaikan'}</p>
             <p class="hero__msg">${c.LANDING_MESSAGE || ''}</p>
             <div class="hero__cta">
               ${KD.auth.loggedIn() ? html`<a class="btn btn-cream btn-lg" href="#/hantar">${icon('send')}Hantar Doa</a><a class="btn btn-light btn-lg" href="#/utama">Buka aplikasi</a>`
                 : html`${c.ALLOW_REGISTRATION !== false ? html`<a class="btn btn-cream btn-lg" href="#/daftar">Daftar Baru</a>` : ''}<a class="btn btn-light btn-lg" href="#/log-masuk">Log Masuk</a>`}
             </div>
-            <p class="hero__count">Sebanyak <strong>${fmtNum(c.TOTAL_DOA || 0)}</strong> doa telah dikirim melalui ${c.SYSTEM_NAME || 'Kirim Doa'}</p>
+            <p class="hero__count">Sebanyak <strong>${fmtNum(c.TOTAL_DOA || 0)}</strong> doa telah dikirim melalui ${c.SYSTEM_NAME || 'Titipan Hati'}</p>
           </div>
           <div class="hero__skyline">${skyline}</div>
         </section>
@@ -78,8 +79,8 @@
           <div class="about">
             <blockquote class="about__quote">“Dan Tuhanmu berfirman: Berdoalah kepada-Ku, nescaya Aku perkenankan bagimu.”<small>Surah Ghafir, ayat 60</small></blockquote>
             <div>
-              <h2>Tentang ${c.SYSTEM_NAME || 'Kirim Doa'}</h2>
-              <p class="mt-3">Ramai yang berpesan, “Doakan saya di sana.” Pesanan itu mudah hilang dalam mesej yang bertimbun. ${c.SYSTEM_NAME || 'Kirim Doa'} menyimpan setiap hajat dengan kemas, mengikut kategori, supaya tiada doa yang tertinggal.</p>
+              <h2>Tentang ${c.SYSTEM_NAME || 'Titipan Hati'}</h2>
+              <p class="mt-3">Ramai yang berpesan, “Doakan saya di sana.” Pesanan itu mudah hilang dalam mesej yang bertimbun. ${c.SYSTEM_NAME || 'Titipan Hati'} menyimpan setiap hajat dengan kemas, mengikut kategori, supaya tiada doa yang tertinggal.</p>
               <p>Doa anda adalah peribadi. Hanya anda dan penerima boleh membacanya, dan pengirim boleh memilih untuk kekal tanpa nama.</p>
             </div>
           </div>

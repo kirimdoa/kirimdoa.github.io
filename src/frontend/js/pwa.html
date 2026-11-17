@@ -1,6 +1,6 @@
 <script>
 /**
- * KD.pwa — pasang Kirim Doa sebagai aplikasi di telefon.
+ * KD.pwa — pasang Titipan Hati sebagai aplikasi di telefon.
  * Aktif HANYA dalam versi web (GitHub Pages); dalam Apps Script modul ini senyap.
  *  - Android/Chrome: dialog pasang asli (beforeinstallprompt), ditangkap awal oleh bridge.js.
  *  - iPhone/iPad: tiada dialog asli, jadi panduan langkah demi langkah dipaparkan.
@@ -61,16 +61,16 @@
     const steps = ios ? [
       ['share', 'Tekan butang Kongsi', 'Ikon segi empat dengan anak panah ke atas — di bar bawah Safari (iPhone) atau atas kanan (iPad).'],
       ['plus', 'Pilih “Tambah ke Skrin Utama”', 'Leret senarai ke bawah jika tidak kelihatan. Dalam bahasa Inggeris: “Add to Home Screen”.'],
-      ['check', 'Tekan “Tambah”', 'Ikon Kirim Doa akan muncul di skrin utama. Mulai sekarang, buka dari ikon tersebut.']
+      ['check', 'Tekan “Tambah”', 'Ikon Titipan Hati akan muncul di skrin utama. Mulai sekarang, buka dari ikon tersebut.']
     ] : [
       ['menu', 'Buka menu pelayar', 'Tekan ⋮ (tiga titik) di atas kanan Chrome, atau ☰ di bawah Samsung Internet.'],
       ['download', 'Pilih “Pasang aplikasi”', 'Atau “Tambah ke skrin utama” / “Install app”.'],
-      ['check', 'Sahkan “Pasang”', 'Ikon Kirim Doa akan muncul di skrin utama dan senarai aplikasi.']
+      ['check', 'Sahkan “Pasang”', 'Ikon Titipan Hati akan muncul di skrin utama dan senarai aplikasi.']
     ];
     const m = KD.ui.modal({
-      title: 'Pasang Kirim Doa',
+      title: 'Pasang Titipan Hati',
       body: html`<div class="install-guide">
-        <div class="install-guide__app"><img src="icons/icon-192.png" alt="" width="56" height="56"><div><strong>Kirim Doa</strong><div class="xs muted">${location.host}</div></div></div>
+        <div class="install-guide__app"><img src="icons/icon-192.png" alt="" width="56" height="56"><div><strong>Titipan Hati</strong><div class="xs muted">${location.host}</div></div></div>
         <ol class="install-guide__steps">${steps.map((s, i) => html`<li><span class="install-guide__num">${i + 1}</span><div><div class="install-guide__title">${KD.ui.icon(s[0], 'i-sm')}${s[1]}</div><div class="small muted">${s[2]}</div></div></li>`)}</ol>
         ${ios ? html`<p class="xs muted">Pada iPhone, gunakan <strong>Safari</strong>. Jika anda membuka pautan ini dalam WhatsApp atau Facebook, tekan “Buka dalam Safari” dahulu.</p>`
           : html`<p class="xs muted">Jika pilihan pasang tiada, buka pautan ini dalam <strong>Google Chrome</strong>.</p>`}
@@ -96,9 +96,9 @@
     const el = document.createElement('div');
     el.className = 'install-banner';
     el.setAttribute('role', 'dialog');
-    el.setAttribute('aria-label', 'Pasang aplikasi Kirim Doa');
+    el.setAttribute('aria-label', 'Pasang aplikasi Titipan Hati');
     el.innerHTML = html`<img src="icons/icon-192.png" alt="" width="40" height="40">
-      <div class="install-banner__text"><strong>Pasang Kirim Doa</strong><span>Buka terus dari skrin utama, seperti aplikasi biasa.</span></div>
+      <div class="install-banner__text"><strong>Pasang Titipan Hati</strong><span>Buka terus dari skrin utama, seperti aplikasi biasa.</span></div>
       <button class="btn btn-gold btn-sm" data-pwa="install">Pasang</button>
       <button class="icon-btn" data-pwa="dismiss" aria-label="Tutup">${KD.ui.icon('x')}</button>`.s;
     document.body.appendChild(el);
@@ -122,7 +122,7 @@
       window.__kdInstallPrompt = null;
       hideBanner();
       refresh();
-      KD.ui.toast('Alhamdulillah, Kirim Doa telah dipasang. Buka dari skrin utama anda.');
+      KD.ui.toast('Alhamdulillah, Titipan Hati telah dipasang. Buka dari skrin utama anda.');
     });
     window.addEventListener('hashchange', () => { if (location.hash.indexOf('#/k/') === 0) hideBanner(); });
     refresh();
@@ -198,7 +198,7 @@
   /** Mesti dipanggil daripada klik pengguna (kebenaran pelayar). @return {Promise<boolean>} */
   async function enablePush() {
     const state = pushState();
-    if (state === 'needs-install') { showGuide(); KD.ui.toast('Pada iPhone, pasang Kirim Doa di skrin utama dahulu, kemudian hidupkan notifikasi dari aplikasi.'); return false; }
+    if (state === 'needs-install') { showGuide(); KD.ui.toast('Pada iPhone, pasang Titipan Hati di skrin utama dahulu, kemudian hidupkan notifikasi dari aplikasi.'); return false; }
     if (state === 'unconfigured' || state === 'unsupported') { KD.ui.toast('Notifikasi telefon tidak disokong pada pelayar ini.', 'error'); return false; }
     const perm = await Notification.requestPermission();
     if (perm !== 'granted') {
@@ -260,7 +260,7 @@
     'on': 'Hidup pada peranti ini. Anda akan dimaklumkan apabila doa baharu tiba atau doa anda dibacakan.',
     'off': 'Dapatkan notifikasi di telefon apabila seseorang mengirim doa kepada anda.',
     'denied': 'Notifikasi disekat oleh pelayar. Benarkan dalam tetapan pelayar/telefon untuk laman ini, kemudian cuba semula.',
-    'needs-install': 'Pada iPhone, pasang Kirim Doa di skrin utama dahulu, kemudian hidupkan notifikasi dari aplikasi.',
+    'needs-install': 'Pada iPhone, pasang Titipan Hati di skrin utama dahulu, kemudian hidupkan notifikasi dari aplikasi.',
     'unsupported': 'Pelayar ini tidak menyokong notifikasi telefon. Cuba Google Chrome (Android) atau Safari (iPhone).',
     'unconfigured': ''
   };

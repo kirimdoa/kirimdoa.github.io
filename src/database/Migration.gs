@@ -60,6 +60,11 @@ const Migration = {
       id: 'MIGRATION_010',
       description: 'Planner Umrah: lajur peringatan harian dalam UMRAH_PROFIL',
       up: function () { return SheetManager.ensure('UMRAH_PROFIL'); }
+    },
+    {
+      id: 'MIGRATION_011',
+      description: 'Jenama baharu: "Kirim Doa" → "Titipan Hati" (nama & slogan; nilai suai admin tidak disentuh)',
+      up: function () { return SeedData.rebrandTitipanHati(); }
     }
   ],
 

@@ -1,15 +1,26 @@
 /**
  * @file Config.gs
+ * Titipan Hati © 2026 Zaki. Hak cipta terpelihara.
  * Konfigurasi aplikasi yang TIDAK sensitif. Satu sumber kebenaran.
  *
  * Rahsia (Spreadsheet ID, folder ID, pepper, form secret) TIDAK disimpan di sini —
  * lihat Environment.gs (PropertiesService).
  * Tetapan yang boleh diubah admin semasa runtime ada dalam SETTINGS_DEFS (models/SettingModel.gs).
  */
+/** @return {string} contoh: "© 2026 Zaki. Hak cipta terpelihara." */
+function copyrightLine() {
+  const now = new Date().getFullYear();
+  const years = now > CONFIG.COPYRIGHT_SINCE ? CONFIG.COPYRIGHT_SINCE + '–' + now : String(CONFIG.COPYRIGHT_SINCE);
+  return '© ' + years + ' ' + CONFIG.COPYRIGHT_OWNER + '. Hak cipta terpelihara.';
+}
+
 const CONFIG = Object.freeze({
-  APP_NAME: 'Kirim Doa',
-  TAGLINE: 'Doa anda, cahaya hati',
-  VERSION: '2.1.0',
+  APP_NAME: 'Titipan Hati',
+  TAGLINE: 'Titipkan doa, kami sampaikan',
+  VERSION: '2.2.0',
+  // Hak cipta sistem (dipaparkan di laman awam, aplikasi, PDF & email)
+  COPYRIGHT_OWNER: 'Zaki',
+  COPYRIGHT_SINCE: 2026,
   TIMEZONE_FALLBACK: 'Asia/Kuala_Lumpur',
 
   DEFAULT_PAGE_SIZE: 20,

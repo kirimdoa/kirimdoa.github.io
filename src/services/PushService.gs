@@ -206,7 +206,7 @@ const PushService = {
   test: function (ctx) {
     if (!PushService.enabled()) throw Errors.validation('Notifikasi telefon belum dikonfigurasi oleh pentadbir.');
     SecurityService.rateLimit('push.test', ctx.userId);
-    const sent = PushService.sendToUser(ctx.userId, { title: 'Kirim Doa', body: 'Notifikasi telefon berfungsi. Anda akan dimaklumkan apabila doa baharu tiba.', type: 'TEST', path: '#/notifikasi' });
+    const sent = PushService.sendToUser(ctx.userId, { title: 'Titipan Hati', body: 'Notifikasi telefon berfungsi. Anda akan dimaklumkan apabila doa baharu tiba.', type: 'TEST', path: '#/notifikasi' });
     return { sent: sent };
   }
 };

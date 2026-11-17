@@ -277,13 +277,13 @@
       on(el, 'submit', 'form', (e, f) => { e.preventDefault(); run(qs('button[type="submit"]', f)); });
       on(el, 'click', '[data-act="csv"]', () => {
         if (!report) return;
-        const rows = [['Laporan Kirim Doa', report.range.from, report.range.to], [], ['Ringkasan', 'Nilai']];
+        const rows = [['Laporan Titipan Hati', report.range.from, report.range.to], [], ['Ringkasan', 'Nilai']];
         Object.keys(report.summary).forEach((k) => rows.push([k, report.summary[k]]));
         [['Mengikut hari', report.byDay], ['Mengikut kategori', report.byCategory], ['Mengikut sumber', report.bySource], ['Mengikut penerima', report.byRecipientType], ['Pautan paling aktif', report.topLinks]].forEach((sec) => {
           rows.push([], [sec[0], 'Bilangan']);
           sec[1].forEach((x) => rows.push([x.label, x.value]));
         });
-        downloadText(toCsv(rows), 'text/csv;charset=utf-8', 'laporan-kirimdoa-' + report.range.from + '_' + report.range.to + '.csv');
+        downloadText(toCsv(rows), 'text/csv;charset=utf-8', 'laporan-titipanhati-' + report.range.from + '_' + report.range.to + '.csv');
       });
       on(el, 'click', '[data-act="print"]', () => window.print());
       run(qs('button[type="submit"]', el));
@@ -363,7 +363,7 @@
           qs('[data-mig]', el).innerHTML = html`${mig.map((m) => html`<div class="health-row"><span class="status-dot ${m.appliedAt ? 'status-ok' : 'status-warn'}"></span><div class="grow"><div class="cell-strong small">${m.id}</div><div class="xs muted">${m.description}</div></div><span class="xs muted">${m.appliedAt ? fmtDate(m.appliedAt, true) : 'Tertunda'}</span></div>`)}<p class="xs muted mt-3">Migrasi baharu dijalankan oleh pemilik skrip melalui fungsi runMigration() dalam editor Apps Script.</p>`.s;
           qs('[data-bk]', el).innerHTML = html`<div class="health-row"><span class="status-dot ${health.backup.ok ? 'status-ok' : 'status-warn'}"></span><div class="grow small">Sandaran terakhir</div><strong class="small">${health.backup.lastBackupAt ? fmtDate(health.backup.lastBackupAt, true) : 'Belum pernah'}</strong></div>
             <div class="health-row"><span class="status-dot ${health.script.maintenanceTriggerInstalled ? 'status-ok' : 'status-warn'}"></span><div class="grow small">Sandaran automatik harian</div><strong class="small">${health.script.maintenanceTriggerInstalled ? 'Aktif' : 'Belum dipasang'}</strong></div>
-            <p class="xs muted mt-3">Salinan penuh spreadsheet disimpan dalam folder "Kirim Doa Backup" (30 salinan terkini).</p>`.s;
+            <p class="xs muted mt-3">Salinan penuh spreadsheet disimpan dalam folder "Titipan Hati Backup" (30 salinan terkini).</p>`.s;
           qs('[data-logs]', el).innerHTML = logs.length ? html`<div class="table-wrap"><table class="table"><thead><tr><th>Masa</th><th>ID ralat</th><th>Tindakan</th><th>Mesej</th></tr></thead><tbody>${logs.map((l) => html`<tr><td class="nowrap">${fmtDate(l.createdAt, true)}</td><td class="xs nowrap">${l.errorId}</td><td>${l.action || '—'}</td><td class="small">${l.message}</td></tr>`)}</tbody></table></div>`.s : html`<p class="muted small" style="padding:0 24px 24px">Tiada ralat direkodkan. Alhamdulillah.</p>`.s;
         } catch (err) { qs('[data-mig]', el).innerHTML = errorState(err, 'reload').s; }
       };

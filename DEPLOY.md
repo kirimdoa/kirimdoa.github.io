@@ -1,4 +1,4 @@
-# Deploy Kirim Doa
+# Deploy Titipan Hati
 
 Repo ini menyimpan **laman web** (GitHub Pages, di akar repo) dan **kod sumber** Apps Script (`src/`).
 Setiap kali `src/` diubah dan dipush ke `main`, GitHub Actions (`.github/workflows/deploy.yml`) melakukan perkara berikut secara automatik:
@@ -30,14 +30,14 @@ Tiada lagi langkah ekstrak zip, `clasp push` di PC atau **Manage deployments →
    - Secret: tampal **keseluruhan** kandungan fail `.clasprc.json`
 
 4. **Jalankan deploy pertama**
-   **Actions → Deploy Kirim Doa → Run workflow → Run workflow**. Tunggu sehingga tanda hijau (±2 minit).
+   **Actions → Deploy Titipan Hati → Run workflow → Run workflow**. Tunggu sehingga tanda hijau (±2 minit).
 
 ## Selepas itu
 
 | Mahu | Buat |
 |---|---|
 | Kemas kini kod | Claude (atau anda) push perubahan `src/` ke `main`. Selebihnya automatik |
-| Deploy semula tanpa perubahan | **Actions → Deploy Kirim Doa → Run workflow** |
+| Deploy semula tanpa perubahan | **Actions → Deploy Titipan Hati → Run workflow** |
 | Semak status | Tab **Actions**: hijau = live, merah = gagal (backend dan laman web tidak diubah) |
 | Patah balik ke 1.6.1 | Branch `backup/v1.6.1` (laman web) dan zip sandaran (kod) |
 

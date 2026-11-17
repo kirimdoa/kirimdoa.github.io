@@ -1,5 +1,5 @@
 """
-build_web.py — Bina versi web Kirim Doa (GitHub Pages) TERUS di akar repo ini daripada src/.
+build_web.py — Bina versi web Titipan Hati (GitHub Pages) TERUS di akar repo ini daripada src/.
 
   python3 web-tools/build_web.py            (dijalankan oleh .github/workflows/deploy.yml)
 

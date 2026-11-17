@@ -88,7 +88,7 @@ const AuthService = {
       return u;
     });
 
-    NotificationService.notify(user.user_id, NOTIF_TYPE.WELCOME, 'Selamat datang ke Kirim Doa',
+    NotificationService.notify(user.user_id, NOTIF_TYPE.WELCOME, 'Selamat datang ke Titipan Hati',
       'Mulakan dengan menulis doa pertama anda atau cipta pautan Kumpul Doa untuk dikongsi.', '');
     const actorCtx = { userId: user.user_id, role: user.role, userAgent: ctx && ctx.userAgent };
     AuditService.log(actorCtx, AUDIT_ACTIONS.USER_REGISTERED, 'AUTH', user.user_id, 'Pendaftaran ' + StringUtils.maskEmail(user.email));
@@ -184,7 +184,8 @@ const AuthService = {
           subject: name + ' — Kod set semula kata laluan',
           htmlBody: '<p>Assalamualaikum ' + StringUtils.escapeHtml(user.full_name) + ',</p>' +
             '<p>Kod set semula kata laluan anda ialah:</p><p style="font-size:24px;letter-spacing:4px"><b>' + code + '</b></p>' +
-            '<p>Kod ini sah selama ' + CONFIG.RESET_CODE_TTL_MINUTES + ' minit. Jika anda tidak meminta, abaikan email ini.</p>',
+            '<p>Kod ini sah selama ' + CONFIG.RESET_CODE_TTL_MINUTES + ' minit. Jika anda tidak meminta, abaikan email ini.</p>' +
+            '<p style="color:#aaa;font-size:11px">' + StringUtils.escapeHtml(copyrightLine()) + '</p>',
           name: name
         });
       } catch (e) {

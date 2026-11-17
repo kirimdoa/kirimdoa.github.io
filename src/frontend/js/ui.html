@@ -7,6 +7,12 @@
   const { html, raw, qs, qsa, esc, fmtNum } = KD.utils;
 
   const icon = (name, cls) => raw('<svg class="i ' + (cls || '') + '" aria-hidden="true"><use href="#i-' + esc(name) + '"/></svg>');
+  /** Hak cipta sistem — © 2026 Zaki (julat tahun dikemas kini sendiri). */
+  const COPYRIGHT_OWNER = 'Zaki', COPYRIGHT_SINCE = 2026;
+  const copyright = () => {
+    const now = new Date().getFullYear();
+    return '© ' + (now > COPYRIGHT_SINCE ? COPYRIGHT_SINCE + '–' + now : COPYRIGHT_SINCE) + ' ' + COPYRIGHT_OWNER + '. Hak cipta terpelihara.';
+  };
   const star = (cls) => raw('<svg class="brand-star ' + (cls || '') + '" viewBox="0 0 64 64" aria-hidden="true"><use href="#i-brand"/></svg>');
 
   /** Siluet langit masjid (asli, generik) untuk bahagian bawah hero. */
@@ -146,6 +152,6 @@
   };
   const roleBadge = (r) => html`<span class="badge ${r === 'SUPER_ADMIN' ? 'badge-maroon' : r === 'ADMIN' ? 'badge' : 'badge-muted'}">${r === 'SUPER_ADMIN' ? 'Super Admin' : r === 'ADMIN' ? 'Admin' : 'Pengguna'}</span>`;
 
-  KD.ui = { icon, star, skyline, catIcon, toast, toastError, modal, confirm, skeletonList, skeletonStats, empty, errorState, pager, busy, fieldErrors, statusBadge, roleBadge };
+  KD.ui = { icon, star, copyright, skyline, catIcon, toast, toastError, modal, confirm, skeletonList, skeletonStats, empty, errorState, pager, busy, fieldErrors, statusBadge, roleBadge };
 })(window.KD);
 </script>

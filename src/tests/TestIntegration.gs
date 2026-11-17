@@ -524,9 +524,18 @@ const TestSuiteAdmin = {
     }],
     ['Tetapan: ADMIN tidak boleh ubah tetapan kritikal', function (t) {
       const a = TestHelpers.admin(ROLES.ADMIN);
-      TestAssert.apiOk(TestHelpers.call(a.token, 'admin.settings.update', { changes: { SYSTEM_TAGLINE: 'Doa anda, cahaya hati' } }));
+      TestAssert.apiOk(TestHelpers.call(a.token, 'admin.settings.update', { changes: { SYSTEM_TAGLINE: 'Titipkan doa, kami sampaikan' } }));
       TestAssert.apiFail(TestHelpers.call(a.token, 'admin.settings.update', { changes: { MAINTENANCE_MODE: true } }), ERROR_CODES.FORBIDDEN);
       TestAssert.apiFail(TestHelpers.call(a.token, 'admin.settings.update', { changes: { NOT_A_KEY: 1 } }), ERROR_CODES.VALIDATION_ERROR);
+    }],
+    ['Migrasi jenama: "Kirim Doa" → "Titipan Hati"; nilai suai admin kekal', function (t) {
+      SettingsRepository.setMany({ SYSTEM_NAME: 'Kirim Doa', SYSTEM_TAGLINE: 'Slogan suai admin' }, 'TEST');
+      const r = SeedData.rebrandTitipanHati();
+      t.eq(r.updated.join(','), 'SYSTEM_NAME');
+      t.eq(SettingsService.get('SYSTEM_NAME'), 'Titipan Hati');
+      t.eq(SettingsService.get('SYSTEM_TAGLINE'), 'Slogan suai admin');
+      t.eq(SeedData.rebrandTitipanHati().updated.length, 0); // idempoten
+      t.ok(/^© 2026(–\d{4})? Zaki\. Hak cipta terpelihara\.$/.test(copyrightLine()));
     }],
     ['Mod penyelenggaraan: pengguna disekat, admin dibenarkan', function (t) {
       const s = TestHelpers.admin(ROLES.SUPER_ADMIN);
@@ -569,7 +578,7 @@ const TestSuiteAdmin = {
       t.ok(st.kpi.totalUsers > 0 && st.charts.doaByDay.length === 14);
       const rep = TestAssert.apiOk(TestHelpers.call(s.token, 'admin.report', {}));
       t.ok(rep.summary.totalDoa >= 0);
-      const b = TestAssert.apiOk(TestHelpers.call(s.token, 'admin.broadcast', { title: 'Makluman', message: 'Selamat menggunakan Kirim Doa.' }));
+      const b = TestAssert.apiOk(TestHelpers.call(s.token, 'admin.broadcast', { title: 'Makluman', message: 'Selamat menggunakan Titipan Hati.' }));
       t.ok(b.sent > 0);
       const h = TestAssert.apiOk(TestHelpers.call(s.token, 'admin.health'));
       t.ok(h.database.ok, 'pangkalan data sihat');
@@ -577,7 +586,7 @@ const TestSuiteAdmin = {
     ['doGet menghidangkan halaman (meta tag dibenarkan, anti-clickjacking lalai)', function (t) {
       const out = doGet({ parameter: { c: 'abc<script>' } });
       t.eq(out.xframe, 'DEFAULT', 'tidak boleh dibenam secara lalai');
-      t.ok(out.meta.viewport && out.title.indexOf('Kirim Doa') === 0);
+      t.ok(out.meta.viewport && out.title.indexOf('Titipan Hati') === 0);
       const ok = doGet({ parameter: { c: 'K2QCST5Z' } });
       t.ok(ok && ok.meta, 'kod sah diterima');
     }, { nodeOnly: true }],

@@ -46,7 +46,7 @@ const HealthService = {
 };
 
 const BackupService = {
-  /** Salin keseluruhan spreadsheet ke "Kirim Doa Backup/YYYY". Simpan N salinan terkini. */
+  /** Salin keseluruhan spreadsheet ke "Titipan Hati Backup/YYYY". Simpan N salinan terkini. */
   run: function (ctx) {
     const folderId = Env.get('BACKUP_FOLDER_ID');
     if (!folderId) throw new AppError(ERROR_CODES.CONFIG_ERROR, 'Folder backup belum dikonfigurasi.');

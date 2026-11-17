@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "Kirim Doa",
-  "short_name": "Kirim Doa",
-  "description": "Doa anda, cahaya hati — hantar, kumpul dan baca doa. Kumpul doa keluarga & sahabat sebelum ke Tanah Suci, baca satu demi satu dan maklumkan mereka apabila doa telah dibacakan.",
+  "name": "Titipan Hati",
+  "short_name": "Titipan Hati",
+  "description": "Titipkan doa, kami sampaikan — hantar, kumpul dan baca doa. Kumpul doa keluarga & sahabat sebelum ke Tanah Suci, baca satu demi satu dan maklumkan mereka apabila doa telah dibacakan.",
   "lang": "ms",
   "dir": "ltr",
   "start_url": "./",
@@ -27,7 +27,7 @@
       "icons": [{ "src": "icons/shortcut-link.png", "sizes": "96x96", "type": "image/png" }] }
   ],
   "screenshots": [
-    { "src": "screenshots/utama.png", "sizes": "780x1688", "type": "image/png", "form_factor": "narrow", "label": "Papan pemuka Kirim Doa" },
+    { "src": "screenshots/utama.png", "sizes": "780x1688", "type": "image/png", "form_factor": "narrow", "label": "Papan pemuka Titipan Hati" },
     { "src": "screenshots/baca.png", "sizes": "780x1688", "type": "image/png", "form_factor": "narrow", "label": "Baca doa satu demi satu dan tandakan sudah dibacakan" },
     { "src": "screenshots/kumpul.png", "sizes": "780x1688", "type": "image/png", "form_factor": "narrow", "label": "Borang Kumpul Doa untuk keluarga dan sahabat" }
   ]

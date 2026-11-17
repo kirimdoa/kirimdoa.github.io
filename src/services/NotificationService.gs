@@ -107,7 +107,8 @@ const NotificationService = {
           '<blockquote style="border-left:3px solid #C9A24B;margin:12px 0;padding:6px 12px;color:#4B1027">' + excerpt + '</blockquote>' +
           '<p>Semoga Allah memakbulkan doa anda dan membalas kebaikan anda.</p>' +
           '<p style="color:#888;font-size:12px">Anda menerima email ini kerana memberikan alamat email semasa mengirim doa. ' +
-          'Alamat email anda telah dipadam daripada sistem selepas makluman ini dihantar.</p>',
+          'Alamat email anda telah dipadam daripada sistem selepas makluman ini dihantar.</p>' +
+          '<p style="color:#aaa;font-size:11px">' + StringUtils.escapeHtml(copyrightLine()) + '</p>',
         name: name
       });
       return true;
@@ -124,14 +125,15 @@ const NotificationService = {
       const esc = StringUtils.escapeHtml;
       const base = PushService.baseUrl();
       const button = base ? '<p><a href="' + esc(base + '#/notifikasi') + '" style="display:inline-block;background:#781E3A;color:#fff;' +
-        'padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600">Buka Kirim Doa</a></p>' : '<p>Log masuk ke ' + esc(name) + ' untuk membacanya.</p>';
+        'padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600">Buka Titipan Hati</a></p>' : '<p>Log masuk ke ' + esc(name) + ' untuk membacanya.</p>';
       MailApp.sendEmail({
         to: owner.email,
         subject: name + ' — Doa baharu daripada ' + StringUtils.truncate(fromLabel, 40),
         htmlBody: '<p>Assalamualaikum ' + esc(owner.full_name) + ',</p>' +
           '<p><b>' + esc(fromLabel) + '</b> telah mengirim doa kepada anda melalui pautan "' + esc(recipient.title) + '".</p>' + button +
           '<p style="color:#888;font-size:12px">Anda menerima email ini kerana makluman email doa baharu dihidupkan. ' +
-          'Isi doa hanya boleh dibaca selepas log masuk.</p>',
+          'Isi doa hanya boleh dibaca selepas log masuk.</p>' +
+          '<p style="color:#aaa;font-size:11px">' + StringUtils.escapeHtml(copyrightLine()) + '</p>',
         name: name
       });
     } catch (e) {

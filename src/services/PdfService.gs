@@ -14,7 +14,7 @@ const PdfService = {
     const settings = SettingsService.all();
     const html = PdfService.render(items, ctx.user, settings, filters || {});
     const stamp = Utilities.formatDate(new Date(), DateUtils.tz(), 'yyyyMMdd-HHmm');
-    const filename = 'KirimDoa-' + stamp + '.pdf';
+    const filename = 'TitipanHati-' + stamp + '.pdf';
     const pdf = Utilities.newBlob(html, 'text/html', 'export.html').getAs('application/pdf').setName(filename);
     AuditService.log(ctx, AUDIT_ACTIONS.EXPORT_GENERATED, 'EXPORT', '', items.length + ' doa · ' + (filters && filters.scope || 'ALL'));
     return { filename: filename, mimeType: 'application/pdf', data: Utilities.base64Encode(pdf.getBytes()), count: items.length };
@@ -48,7 +48,7 @@ const PdfService = {
       '<div class="info">' + e(scopeLabel[filters.scope] || scopeLabel.ALL) + ' · ' + items.length + ' doa · ' +
       e(user.full_name) + ' · Dijana ' + e(DateUtils.format(new Date(), 'dd MMM yyyy, HH:mm')) + '</div></div>' +
       blocks +
-      '<div class="foot">' + e(settings.SYSTEM_NAME) + ' — ' + e(settings.SYSTEM_TAGLINE) + '</div>' +
+      '<div class="foot">' + e(settings.SYSTEM_NAME) + ' — ' + e(settings.SYSTEM_TAGLINE) + '<br>' + e(copyrightLine()) + '</div>' +
       '</body></html>';
   }
 };

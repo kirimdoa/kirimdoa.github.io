@@ -36,7 +36,7 @@ const UmrahService = {
       ['SEBELUM', 'ROHANI', 'Ulang kaji manasik Umrah', 'Ihram, Tawaf, Sa\'ie, Tahallul', -3],
       ['SEBELUM', 'ROHANI', 'Hafal lafaz niat & talbiah', 'Lihat tab Panduan', -3],
       ['SEBELUM', 'ROHANI', 'Fahami larangan ihram', 'Lihat tab Panduan', -3],
-      ['SEBELUM', 'ROHANI', 'Kongsi pautan Kumpul Doa kepada keluarga', 'Titipan doa terus masuk ke Kirim Doa', -3],
+      ['SEBELUM', 'ROHANI', 'Kongsi pautan Kumpul Doa kepada keluarga', 'Doa titipan terus masuk ke Titipan Hati', -3],
       ['SEBELUM', 'ROHANI', 'Mohon maaf & minta halal', 'Keluarga, rakan sekerja, jiran', -1],
       ['SEBELUM', 'ROHANI', 'Selesaikan hutang / tulis wasiat ringkas', 'Maklumkan waris', -2],
       ['SEBELUM', 'KESIHATAN', 'Ubat peribadi + preskripsi doktor', 'Bawa lebihan; simpan dalam beg tangan', -3],

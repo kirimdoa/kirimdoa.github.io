@@ -55,7 +55,7 @@ const SheetManager = {
     try {
       const existing = sh.getProtections(SpreadsheetApp.ProtectionType.SHEET);
       if (existing && existing.length) return;
-      const p = sh.protect().setDescription('Kirim Doa — data sensitif. Jangan sunting manual.');
+      const p = sh.protect().setDescription('Titipan Hati — data sensitif. Jangan sunting manual.');
       const me = Session.getEffectiveUser();
       p.addEditor(me);
       p.removeEditors(p.getEditors().filter(function (u) { return u.getEmail() !== me.getEmail(); }));

@@ -1,4 +1,4 @@
-# Deploy automatik Kirim Doa: setiap push ke main yang mengubah src/, tools/ atau web-tools/ →
+# Deploy automatik Titipan Hati: setiap push ke main yang mengubah src/, tools/ atau web-tools/ →
 #   1. Ujian backend (2 susunan muat) + semakan frontend + imbasan rahsia
 #   2. Apps Script: clasp push + kemas kini deployment SEDIA ADA (URL /exec kekal sama, versi baharu dicipta)
 #   3. Laman web (GitHub Pages): bina assets/ + index.html + sw.js daripada src/ dan commit ke main
@@ -6,7 +6,7 @@
 # Migrasi pangkalan data (sheet/lajur baharu) berjalan sendiri pada permintaan pertama.
 #
 # Persediaan SEKALI: Secret CLASPRC_JSON (lihat DEPLOY.md).
-name: Deploy Kirim Doa
+name: Deploy Titipan Hati
 
 on:
   push:

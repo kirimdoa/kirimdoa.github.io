@@ -1,5 +1,5 @@
 /**
- * Kirim Doa — jambatan google.script.* untuk versi web statik (GitHub Pages / domain sendiri).
+ * Titipan Hati — jambatan google.script.* untuk versi web statik (GitHub Pages / domain sendiri).
  *
  * Frontend yang sama digunakan dalam Apps Script dan versi web. Dalam Apps Script,
  * `google.script.run.api()` disediakan oleh Google. Di sini, kita sediakan objek yang

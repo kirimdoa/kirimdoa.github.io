@@ -21,6 +21,22 @@ const SeedData = {
     ['Lain-lain', 'Others', 'star']
   ],
 
+  /**
+   * MIGRATION_011: tukar SYSTEM_NAME / SYSTEM_TAGLINE yang masih bernilai lalai lama kepada jenama baharu.
+   * Idempoten. Nilai yang telah diubah suai oleh admin dibiarkan.
+   */
+  rebrandTitipanHati: function () {
+    const OLD = { SYSTEM_NAME: 'Kirim Doa', SYSTEM_TAGLINE: 'Doa anda, cahaya hati' };
+    const current = {};
+    SettingsRepository.rows().forEach(function (r) { current[r.setting_key] = r.setting_value; });
+    const changes = {};
+    Object.keys(OLD).forEach(function (k) {
+      if (current[k] === OLD[k]) changes[k] = SETTINGS_DEFS[k].default;
+    });
+    if (Object.keys(changes).length) SettingsRepository.setMany(changes, 'SYSTEM');
+    return { updated: Object.keys(changes) };
+  },
+
   /** @return {number} bilangan kategori ditambah */
   /**
    * MIGRATION_006: pastikan "Umum" wujud & aktif; sembunyikan (INACTIVE) kategori lain.
