@@ -2014,7 +2014,7 @@ window.KD = window.KD || {};
       } catch (err) { el.innerHTML = errorState(err).s; return; }
       if (existing && !existing.canEdit) { el.innerHTML = empty('Doa ini tidak boleh disunting', 'Hanya doa yang anda tulis sendiri boleh disunting.', html`<a class="btn btn-outline" href="#/senarai">Kembali ke senarai</a>`).s; return; }
 
-      const v = existing || { recipientType: 'SELF', recipientName: '', categoryId: '', title: '', text: '', isAnonymous: false };
+      const v = existing || { recipientType: 'SELF', recipientName: '', categoryId: '', title: '', text: '', senderMessage: '', isAnonymous: false };
       let files = [];
       let rid = requestId();
 
@@ -2028,6 +2028,7 @@ window.KD = window.KD || {};
             ${cats.length > 1 ? html`<div class="field"><label class="label" for="d-cat">Kategori <span class="req">*</span></label><select class="select" id="d-cat" name="categoryId" required><option value="">Pilih kategori doa</option>${cats.map((c) => html`<option value="${c.id}" ${v.categoryId === c.id ? raw('selected') : ''}>${c.nameMs}</option>`)}</select></div>` : ''}
             <div class="field"><label class="label" for="d-title">Tajuk</label><input class="input" id="d-title" name="title" maxlength="120" value="${v.title}" placeholder="cth. Semoga sembuh segera"></div>
             <div class="field"><label class="label" for="d-text">Isi doa <span class="req">*</span></label><textarea class="textarea" id="d-text" name="doaText" required maxlength="${maxLen}" placeholder="Tulis doa anda di sini…">${v.text}</textarea><div class="counter" data-counter>${v.text.length} / ${maxLen}</div></div>
+            <div class="field ${v.recipientType === 'SELF' ? 'hidden' : ''}" data-recipient><label class="label" for="d-msg">Ucapan untuk penerima (pilihan)</label><textarea class="textarea" id="d-msg" name="senderMessage" rows="2" maxlength="300" placeholder="cth. Selamat menunaikan umrah, semoga dipermudahkan segala urusan di sana.">${v.senderMessage || ''}</textarea><span class="hint">Ucapan ringkas yang dipaparkan bersama doa anda.</span></div>
             ${!editId && maxFiles ? html`<div class="field"><span class="label">Lampiran (pilihan)</span>
               <div class="dropzone"><label class="btn btn-outline btn-sm" for="d-files">${icon('clip', 'i-sm')}Pilih fail</label><input class="sr-only" type="file" id="d-files" multiple accept="${accept}"><span class="hint" data-files-hint>Tiada fail dipilih</span><div class="row row-wrap" data-files></div></div>
               <span class="hint">Gambar, audio atau PDF. Maksimum ${maxFiles} fail, ${maxMb}MB setiap satu.</span></div>` : ''}
@@ -2045,7 +2046,7 @@ window.KD = window.KD || {};
         const t = b.getAttribute('data-type');
         qsa('[data-who] button', el).forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
         form.recipientType.value = t;
-        qs('[data-recipient]', el).classList.toggle('hidden', t === 'SELF');
+        qsa('[data-recipient]', el).forEach((x) => x.classList.toggle('hidden', t === 'SELF'));
         if (t !== 'SELF') qs('#d-rname', el).focus();
       });
       const ta = qs('#d-text', el);
@@ -2076,7 +2077,7 @@ window.KD = window.KD || {};
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const data = formData(form);
-        if (data.recipientType === 'SELF') delete data.recipientName;
+        if (data.recipientType === 'SELF') { delete data.recipientName; data.senderMessage = ''; }
         await busy(qs('button[type="submit"]', form), async () => {
           try {
             if (editId) {
