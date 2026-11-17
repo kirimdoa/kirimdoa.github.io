@@ -1678,6 +1678,8 @@ window.KD = window.KD || {};
               ${link.categories.length > 1 ? html`<div class="field"><label class="label" for="c-cat">Kategori <span class="req">*</span></label><select class="select" id="c-cat" name="categoryId" required><option value="">Pilih kategori doa</option>${link.categories.map((c) => html`<option value="${c.id}">${c.nameMs}</option>`)}</select></div>` : ''}
               <div class="field"><label class="label" for="c-title">Tajuk (pilihan)</label><input class="input" id="c-title" name="title" maxlength="120" placeholder="cth. Untuk kesihatan mak"></div>
               <div class="field"><label class="label" for="c-text">Isi doa <span class="req">*</span></label><textarea class="textarea" id="c-text" name="doaText" required minlength="${link.doaMinLength}" maxlength="${link.doaMaxLength}" placeholder="Tulis doa atau hajat anda di sini…"></textarea><div class="counter" data-counter>0 / ${link.doaMaxLength}</div></div>
+              <div class="field"><label class="label" for="c-msg">Ucapan untuk ${link.displayName} (pilihan)</label><textarea class="textarea" id="c-msg" name="senderMessage" rows="2" maxlength="300" placeholder="cth. Selamat menunaikan umrah, semoga dipermudahkan segala urusan di sana."></textarea>
+                <div class="hint">Ucapan ringkas yang akan dibaca oleh ${link.displayName} bersama doa anda.</div></div>
               ${me ? html`<p class="xs muted mt-2">${icon('bell', 'i-sm')} Anda akan menerima notifikasi dalam aplikasi apabila ${link.displayName} membacakan doa anda.</p>`
                 : html`<div class="field"><label class="label" for="c-email">Email anda (pilihan)</label><input class="input" id="c-email" name="senderEmail" type="email" maxlength="254" autocomplete="email" inputmode="email" placeholder="cth. nama@gmail.com">
                   <div class="hint">Isi jika anda mahu dimaklumkan apabila ${link.displayName} membacakan doa anda. Email hanya digunakan untuk tujuan ini, tidak dipaparkan kepada sesiapa, dan dipadam selepas makluman dihantar.</div></div>`}
@@ -1763,6 +1765,10 @@ window.KD = window.KD || {};
   const waPrayedButton = (d) => (d.isPrayed && d.senderWhatsApp
     ? html`<a class="btn btn-wa" href="${waPrayedUrl(d)}" target="_blank" rel="noopener">${icon('share')}Maklumkan ${d.isAnonymous ? 'pengirim' : d.senderName} melalui WhatsApp</a>` : '');
 
+  /** Ucapan pengirim kepada penerima (pautan Kumpul Doa). */
+  const senderMessageBox = (d) => (d.senderMessage
+    ? html`<div class="sender-msg">${icon('heart', 'i-sm')}<div><div class="sender-msg__label">Ucapan daripada ${fromLabel(d)}</div><div class="sender-msg__text">${d.senderMessage}</div></div></div>` : '');
+
   const prayedBadge = (d) => (d.isPrayed ? html`<span class="badge badge-success">${icon('check', 'i-sm')}Dibacakan</span>` : '');
 
   // ---------------------------------------------------------------- Item doa
@@ -1807,6 +1813,7 @@ window.KD = window.KD || {};
     qs('.modal__head h3', m.el).textContent = d.title || (d.direction === 'RECEIVED' ? 'Doa daripada ' + fromLabel(d) : (d.recipientType === 'SELF' ? 'Doa untuk diri sendiri' : 'Doa untuk ' + d.recipientName));
     body.innerHTML = html`<div class="cat-dot" style="margin-bottom:12px">${catIcon(d.categoryIcon)}${d.categoryName}</div>
       <div class="doa-detail__text">${d.text}</div>
+      ${senderMessageBox(d)}
       ${d.attachments && d.attachments.length ? html`<div class="mt-6"><div class="label">Lampiran</div><div class="stack mt-2">${d.attachments.map((a) => html`<div><button class="file-chip" data-att="${a.id}">${icon('clip', 'i-sm')}${a.filename} <span class="muted">${fmtBytes(a.size)}</span></button><div data-att-view="${a.id}"></div></div>`)}</div></div>` : ''}
       <dl class="doa-detail__meta">
         <div><dt>Daripada</dt><dd>${fromLabel(d)}</dd></div>
@@ -2208,6 +2215,7 @@ window.KD = window.KD || {};
             ${star()}<div class="reader__cat">${catIcon(d.categoryIcon, 'i-sm')}${d.categoryName}</div>
             ${d.title ? html`<h2 class="reader__title">${d.title}</h2>` : ''}
             <p class="reader__text">${d.text}</p>
+            ${senderMessageBox(d)}
             <div class="reader__from">Daripada <strong>${fromLabel(d)}</strong> · Untuk <strong>${toLabel(d)}</strong><br><span class="xs">${fmtDate(d.createdAt)}</span></div>
           </article>
           <div class="reader__prayed" data-prayed-box>${d.isPrayed
