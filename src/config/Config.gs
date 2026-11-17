@@ -17,10 +17,14 @@ function copyrightLine() {
 const CONFIG = Object.freeze({
   APP_NAME: 'Titipan Hati',
   TAGLINE: 'Titipkan doa, kami sampaikan',
-  VERSION: '2.2.0',
+  VERSION: '2.3.0',
   // Hak cipta sistem (dipaparkan di laman awam, aplikasi, PDF & email)
   COPYRIGHT_OWNER: 'Zaki',
   COPYRIGHT_SINCE: 2026,
+  // Ayat makluman kepada pengirim apabila doa ditanda "telah dibacakan" (WhatsApp, notifikasi aplikasi, email).
+  // "di Tanah Suci" hanya disertakan bagi pautan Umrah/Haji.
+  PRAYED_DOA_PREFIX: 'Alhamdulillah, doa kiriman anda telah dibaca',
+  PRAYED_DOA_DUA: 'Semoga Allah memakbulkan segala doa² itu pada waktu terbaik & cara paling indah menurut perancanganNya 🤲✨',
   TIMEZONE_FALLBACK: 'Asia/Kuala_Lumpur',
 
   DEFAULT_PAGE_SIZE: 20,

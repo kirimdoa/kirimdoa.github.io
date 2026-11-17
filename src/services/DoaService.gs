@@ -41,6 +41,17 @@ const DoaService = {
     return cat;
   },
 
+  /**
+   * Ayat makluman "telah dibacakan" kepada pengirim.
+   * @param {boolean} holy  pautan Umrah/Haji → "di Tanah Suci"
+   * @param {string=} label tajuk/petikan doa (berpetik)
+   * @param {string=} readerName nama pembaca
+   */
+  prayedMessage: function (holy, label, readerName) {
+    return CONFIG.PRAYED_DOA_PREFIX + (label ? ' ' + label : '') + (holy ? ' di Tanah Suci' : '') +
+      (readerName ? ' oleh ' + readerName : '') + '. ' + CONFIG.PRAYED_DOA_DUA;
+  },
+
   /** recipient_id → occasion bagi pautan milik pengguna (untuk mesej WhatsApp "di Tanah Suci"). */
   occasionMap: function (userId) {
     const m = {};
@@ -222,12 +233,14 @@ const DoaService = {
     let notified = '';
     const readerName = (ctx.user && ctx.user.full_name) || doa.recipient_name || 'Penerima';
     const label = '"' + StringUtils.truncate(doa.title || doa.doa_text, 60).replace(/[.!?。]+$/, '') + '"';
+    const occasion = doa.recipient_id ? (DoaService.occasionMap(owner)[doa.recipient_id] || '') : '';
+    const holy = /^(UMRAH|HAJI)$/.test(occasion);
     if (doa.sender_user_id && doa.sender_user_id !== ctx.userId) {
       NotificationService.notify(doa.sender_user_id, NOTIF_TYPE.DOA_PRAYED, 'Doa anda telah dibacakan',
-        readerName + ' telah membacakan doa anda ' + label + '. Semoga dimakbulkan Allah.', doa.doa_id);
+        DoaService.prayedMessage(holy, label, readerName), doa.doa_id);
       notified = 'APP';
     } else if (doa.sender_email) {
-      if (NotificationService.emailDoaPrayed(doa, readerName)) notified = 'EMAIL';
+      if (NotificationService.emailDoaPrayed(doa, readerName, holy)) notified = 'EMAIL';
       patch.sender_email = ''; // dipadam sama ada berjaya atau tidak — tidak disimpan lebih lama daripada perlu
     }
     const updated = DoaRepository.update(doa.doa_id, patch);

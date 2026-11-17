@@ -300,6 +300,9 @@ const TestSuiteRecipient = {
       t.ok(r.isPrayed && r.prayedAt && !r.canMarkPrayed); t.eq(r.notified, 'APP');
       const n = TestAssert.apiOk(TestHelpers.call(sender.token, 'notification.list', {}));
       t.ok(n.items.some(function (x) { return x.type === NOTIF_TYPE.DOA_PRAYED && x.referenceId === d.id; }), 'pengirim dimaklumkan');
+      const pn = n.items.filter(function (x) { return x.type === NOTIF_TYPE.DOA_PRAYED; })[0];
+      t.ok(pn.message.indexOf('Alhamdulillah, doa kiriman anda') === 0 && pn.message.indexOf('pada waktu terbaik & cara paling indah') > 0, 'ayat makluman baharu');
+      t.ok(pn.message.indexOf('Tanah Suci') < 0, 'bukan pautan Umrah/Haji → tiada "di Tanah Suci"');
       // Idempoten: tanda kali kedua tidak menghantar notifikasi berganda
       TestAssert.apiOk(TestHelpers.call(owner.token, 'doa.markPrayed', { id: d.id }));
       const n2 = TestAssert.apiOk(TestHelpers.call(sender.token, 'notification.list', {}));
@@ -314,7 +317,7 @@ const TestSuiteRecipient = {
     }],
     ['Telah dibacakan: email pilihan pengirim awam dihantar sekali & dipadam', function (t) {
       const owner = TestHelpers.user('praye');
-      const link = TestAssert.apiOk(TestHelpers.call(owner.token, 'recipient.create', { displayName: 'Mak Cik', title: 'Doakan haji saya' }));
+      const link = TestAssert.apiOk(TestHelpers.call(owner.token, 'recipient.create', { displayName: 'Mak Cik', title: 'Doakan haji saya', occasion: 'HAJI' }));
       TestAssert.apiFail(api({ action: 'recipient.submit', payload: { code: link.code, senderName: 'Ali', senderEmail: 'bukan-email', categoryId: TestHelpers.categoryId(), doaText: 'Semoga haji mabrur.', formToken: TestHelpers.agedFormToken(link.code) } }), ERROR_CODES.VALIDATION_ERROR);
       TestAssert.apiOk(api({ action: 'recipient.submit', payload: { code: link.code, senderName: 'Ali', senderEmail: 'Ali@Contoh.MY', categoryId: TestHelpers.categoryId(), doaText: 'Semoga haji mabrur.', formToken: TestHelpers.agedFormToken(link.code) } }));
       const d = TestAssert.apiOk(TestHelpers.call(owner.token, 'doa.list', { scope: 'RECEIVED' })).items[0];
@@ -324,6 +327,8 @@ const TestSuiteRecipient = {
       t.eq(TestAssert.apiOk(TestHelpers.call(owner.token, 'doa.markPrayed', { id: d.id })).notified, 'EMAIL');
       t.eq(globalThis.__mails.length, before + 1);
       t.eq(globalThis.__mails[before].to, 'ali@contoh.my');
+      t.ok(globalThis.__mails[before].htmlBody.indexOf('doa kiriman anda telah dibaca di Tanah Suci') > 0, 'pautan Haji → "di Tanah Suci"');
+      t.ok(globalThis.__mails[before].htmlBody.indexOf('menurut perancanganNya') > 0);
       Database.resetRequestCache();
       t.eq(DoaRepository.findById(d.id).sender_email, '', 'email dipadam selepas makluman');
     }, { nodeOnly: true }],

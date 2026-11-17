@@ -92,7 +92,7 @@ const NotificationService = {
   },
 
   /** Email kepada pengirim awam (tanpa akaun) yang memberi email secara sukarela. @return {boolean} */
-  emailDoaPrayed: function (doa, readerName) {
+  emailDoaPrayed: function (doa, readerName, holy) {
     try {
       if (!doa.sender_email || MailApp.getRemainingDailyQuota() < 5) return false;
       const name = SettingsService.get('SYSTEM_NAME');
@@ -103,9 +103,9 @@ const NotificationService = {
         to: doa.sender_email,
         subject: name + ' — Doa anda telah dibacakan',
         htmlBody: '<p>Assalamualaikum' + sender + ',</p>' +
-          '<p>Alhamdulillah, <b>' + esc(readerName) + '</b> telah membacakan doa yang anda kirimkan:</p>' +
+          '<p>' + esc(CONFIG.PRAYED_DOA_PREFIX) + (holy ? ' di Tanah Suci' : '') + ' oleh <b>' + esc(readerName) + '</b>:</p>' +
           '<blockquote style="border-left:3px solid #C9A24B;margin:12px 0;padding:6px 12px;color:#4B1027">' + excerpt + '</blockquote>' +
-          '<p>Semoga Allah memakbulkan doa anda dan membalas kebaikan anda.</p>' +
+          '<p>' + esc(CONFIG.PRAYED_DOA_DUA) + '</p>' +
           '<p style="color:#888;font-size:12px">Anda menerima email ini kerana memberikan alamat email semasa mengirim doa. ' +
           'Alamat email anda telah dipadam daripada sistem selepas makluman ini dihantar.</p>' +
           '<p style="color:#aaa;font-size:11px">' + StringUtils.escapeHtml(copyrightLine()) + '</p>',
