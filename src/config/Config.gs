@@ -17,7 +17,7 @@ function copyrightLine() {
 const CONFIG = Object.freeze({
   APP_NAME: 'Titipan Hati',
   TAGLINE: 'Titipkan doa, kami sampaikan',
-  VERSION: '2.4.0',
+  VERSION: '2.4.1',
   // Hak cipta sistem (dipaparkan di laman awam, aplikasi, PDF & email)
   COPYRIGHT_OWNER: 'Zaki',
   COPYRIGHT_SINCE: 2026,

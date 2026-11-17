@@ -329,6 +329,17 @@ const TestSuiteRecipient = {
       t.eq(abu.senderMessage, '');
       t.eq(TestAssert.apiOk(TestHelpers.call(owner.token, 'doa.get', { id: siti.id })).senderMessage, msg);
     }],
+    ['Ucapan pengirim dalam Hantar Doa: untuk orang lain sahaja; boleh disunting', function (t) {
+      const u = TestHelpers.user('ucapapp');
+      const msg = 'Selamat menunaikan umrah, semoga dipermudahkan.';
+      const d = TestAssert.apiOk(TestHelpers.call(u.token, 'doa.create', { recipientType: 'PERSON', recipientName: 'Abang', categoryId: TestHelpers.categoryId(), doaText: 'Semoga umrah abang mabrur.', senderMessage: msg }));
+      t.eq(d.senderMessage, msg);
+      const self = TestAssert.apiOk(TestHelpers.call(u.token, 'doa.create', { recipientType: 'SELF', categoryId: TestHelpers.categoryId(), doaText: 'Ya Allah, ampunkan dosaku.', senderMessage: 'abaikan' }));
+      t.eq(self.senderMessage, '', 'doa diri sendiri tiada ucapan');
+      t.eq(TestAssert.apiOk(TestHelpers.call(u.token, 'doa.update', { id: d.id, senderMessage: 'Jaga diri di sana.' })).senderMessage, 'Jaga diri di sana.');
+      t.eq(TestAssert.apiOk(TestHelpers.call(u.token, 'doa.update', { id: d.id, doaText: 'Semoga umrah abang mabrur dan diterima.' })).senderMessage, 'Jaga diri di sana.', 'kekal jika tidak dihantar');
+      t.eq(TestAssert.apiOk(TestHelpers.call(u.token, 'doa.update', { id: d.id, recipientType: 'SELF' })).senderMessage, '', 'dibuang jika ditukar ke diri sendiri');
+    }],
     ['Telah dibacakan: email pilihan pengirim awam dihantar sekali & dipadam', function (t) {
       const owner = TestHelpers.user('praye');
       const link = TestAssert.apiOk(TestHelpers.call(owner.token, 'recipient.create', { displayName: 'Mak Cik', title: 'Doakan haji saya', occasion: 'HAJI' }));

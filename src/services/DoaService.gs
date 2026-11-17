@@ -17,6 +17,7 @@ const DoaService = {
       categoryId: { type: 'id', prefix: 'C', label: 'Kategori' }, // pilihan — lalai "Umum"
       title: { type: 'string', max: CONFIG.TITLE_MAX, label: 'Tajuk' },
       doaText: { type: 'text', required: !partial, min: settings.DOA_MIN_LENGTH, max: settings.DOA_MAX_LENGTH, label: 'Isi doa' },
+      senderMessage: { type: 'text', max: CONFIG.SENDER_MESSAGE_MAX, label: 'Ucapan' }, // pilihan — bukan untuk doa diri sendiri
       isAnonymous: { type: 'boolean', default: false, label: 'Anonim' },
       attachments: { type: 'array', max: settings.MAX_ATTACHMENTS_PER_DOA, label: 'Lampiran' },
       requestId: { type: 'string', max: 64 }
@@ -107,6 +108,7 @@ const DoaService = {
         category_id: data.categoryId,
         title: data.title || '',
         doa_text: data.doaText,
+        sender_message: data.recipientType === RECIPIENT_TYPE.SELF ? '' : (data.senderMessage || ''),
         is_anonymous: !!data.isAnonymous,
         status: DOA_STATUS.ACTIVE,
         visibility: VISIBILITY.PRIVATE,
@@ -273,6 +275,8 @@ const DoaService = {
     if (data.categoryId) { DoaService.requireActiveCategory(data.categoryId); patch.category_id = data.categoryId; }
     if (payload && payload.title !== undefined) patch.title = data.title || '';
     if (data.doaText) patch.doa_text = data.doaText;
+    if (type === RECIPIENT_TYPE.SELF) { if (doa.sender_message) patch.sender_message = ''; }
+    else if (payload && payload.senderMessage !== undefined) patch.sender_message = data.senderMessage || '';
     if (payload && payload.isAnonymous !== undefined) {
       if (data.isAnonymous && !settings.ALLOW_ANONYMOUS) throw Errors.validation('Doa tanpa nama tidak dibenarkan.');
       patch.is_anonymous = !!data.isAnonymous;
