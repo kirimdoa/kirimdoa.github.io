@@ -1,6 +1,6 @@
 /* ---- bahagian 0 ---- */
 /**
- * Kirim Doa — jambatan google.script.* untuk versi web statik (GitHub Pages / domain sendiri).
+ * Titipan Hati — jambatan google.script.* untuk versi web statik (GitHub Pages / domain sendiri).
  *
  * Frontend yang sama digunakan dalam Apps Script dan versi web. Dalam Apps Script,
  * `google.script.run.api()` disediakan oleh Google. Di sini, kita sediakan objek yang
@@ -478,6 +478,12 @@ window.KD = window.KD || {};
   const { html, raw, qs, qsa, esc, fmtNum } = KD.utils;
 
   const icon = (name, cls) => raw('<svg class="i ' + (cls || '') + '" aria-hidden="true"><use href="#i-' + esc(name) + '"/></svg>');
+  /** Hak cipta sistem — © 2026 Zaki (julat tahun dikemas kini sendiri). */
+  const COPYRIGHT_OWNER = 'Zaki', COPYRIGHT_SINCE = 2026;
+  const copyright = () => {
+    const now = new Date().getFullYear();
+    return '© ' + (now > COPYRIGHT_SINCE ? COPYRIGHT_SINCE + '–' + now : COPYRIGHT_SINCE) + ' ' + COPYRIGHT_OWNER + '. Hak cipta terpelihara.';
+  };
   const star = (cls) => raw('<svg class="brand-star ' + (cls || '') + '" viewBox="0 0 64 64" aria-hidden="true"><use href="#i-brand"/></svg>');
 
   /** Siluet langit masjid (asli, generik) untuk bahagian bawah hero. */
@@ -617,7 +623,7 @@ window.KD = window.KD || {};
   };
   const roleBadge = (r) => html`<span class="badge ${r === 'SUPER_ADMIN' ? 'badge-maroon' : r === 'ADMIN' ? 'badge' : 'badge-muted'}">${r === 'SUPER_ADMIN' ? 'Super Admin' : r === 'ADMIN' ? 'Admin' : 'Pengguna'}</span>`;
 
-  KD.ui = { icon, star, skyline, catIcon, toast, toastError, modal, confirm, skeletonList, skeletonStats, empty, errorState, pager, busy, fieldErrors, statusBadge, roleBadge };
+  KD.ui = { icon, star, copyright, skyline, catIcon, toast, toastError, modal, confirm, skeletonList, skeletonStats, empty, errorState, pager, busy, fieldErrors, statusBadge, roleBadge };
 })(window.KD);
 /* ---- bahagian 4 ---- */
 /**
@@ -708,7 +714,7 @@ window.KD = window.KD || {};
 })(window.KD);
 /* ---- bahagian 5 ---- */
 /**
- * KD.pwa — pasang Kirim Doa sebagai aplikasi di telefon.
+ * KD.pwa — pasang Titipan Hati sebagai aplikasi di telefon.
  * Aktif HANYA dalam versi web (GitHub Pages); dalam Apps Script modul ini senyap.
  *  - Android/Chrome: dialog pasang asli (beforeinstallprompt), ditangkap awal oleh bridge.js.
  *  - iPhone/iPad: tiada dialog asli, jadi panduan langkah demi langkah dipaparkan.
@@ -769,16 +775,16 @@ window.KD = window.KD || {};
     const steps = ios ? [
       ['share', 'Tekan butang Kongsi', 'Ikon segi empat dengan anak panah ke atas — di bar bawah Safari (iPhone) atau atas kanan (iPad).'],
       ['plus', 'Pilih “Tambah ke Skrin Utama”', 'Leret senarai ke bawah jika tidak kelihatan. Dalam bahasa Inggeris: “Add to Home Screen”.'],
-      ['check', 'Tekan “Tambah”', 'Ikon Kirim Doa akan muncul di skrin utama. Mulai sekarang, buka dari ikon tersebut.']
+      ['check', 'Tekan “Tambah”', 'Ikon Titipan Hati akan muncul di skrin utama. Mulai sekarang, buka dari ikon tersebut.']
     ] : [
       ['menu', 'Buka menu pelayar', 'Tekan ⋮ (tiga titik) di atas kanan Chrome, atau ☰ di bawah Samsung Internet.'],
       ['download', 'Pilih “Pasang aplikasi”', 'Atau “Tambah ke skrin utama” / “Install app”.'],
-      ['check', 'Sahkan “Pasang”', 'Ikon Kirim Doa akan muncul di skrin utama dan senarai aplikasi.']
+      ['check', 'Sahkan “Pasang”', 'Ikon Titipan Hati akan muncul di skrin utama dan senarai aplikasi.']
     ];
     const m = KD.ui.modal({
-      title: 'Pasang Kirim Doa',
+      title: 'Pasang Titipan Hati',
       body: html`<div class="install-guide">
-        <div class="install-guide__app"><img src="icons/icon-192.png" alt="" width="56" height="56"><div><strong>Kirim Doa</strong><div class="xs muted">${location.host}</div></div></div>
+        <div class="install-guide__app"><img src="icons/icon-192.png" alt="" width="56" height="56"><div><strong>Titipan Hati</strong><div class="xs muted">${location.host}</div></div></div>
         <ol class="install-guide__steps">${steps.map((s, i) => html`<li><span class="install-guide__num">${i + 1}</span><div><div class="install-guide__title">${KD.ui.icon(s[0], 'i-sm')}${s[1]}</div><div class="small muted">${s[2]}</div></div></li>`)}</ol>
         ${ios ? html`<p class="xs muted">Pada iPhone, gunakan <strong>Safari</strong>. Jika anda membuka pautan ini dalam WhatsApp atau Facebook, tekan “Buka dalam Safari” dahulu.</p>`
           : html`<p class="xs muted">Jika pilihan pasang tiada, buka pautan ini dalam <strong>Google Chrome</strong>.</p>`}
@@ -804,9 +810,9 @@ window.KD = window.KD || {};
     const el = document.createElement('div');
     el.className = 'install-banner';
     el.setAttribute('role', 'dialog');
-    el.setAttribute('aria-label', 'Pasang aplikasi Kirim Doa');
+    el.setAttribute('aria-label', 'Pasang aplikasi Titipan Hati');
     el.innerHTML = html`<img src="icons/icon-192.png" alt="" width="40" height="40">
-      <div class="install-banner__text"><strong>Pasang Kirim Doa</strong><span>Buka terus dari skrin utama, seperti aplikasi biasa.</span></div>
+      <div class="install-banner__text"><strong>Pasang Titipan Hati</strong><span>Buka terus dari skrin utama, seperti aplikasi biasa.</span></div>
       <button class="btn btn-gold btn-sm" data-pwa="install">Pasang</button>
       <button class="icon-btn" data-pwa="dismiss" aria-label="Tutup">${KD.ui.icon('x')}</button>`.s;
     document.body.appendChild(el);
@@ -830,7 +836,7 @@ window.KD = window.KD || {};
       window.__kdInstallPrompt = null;
       hideBanner();
       refresh();
-      KD.ui.toast('Alhamdulillah, Kirim Doa telah dipasang. Buka dari skrin utama anda.');
+      KD.ui.toast('Alhamdulillah, Titipan Hati telah dipasang. Buka dari skrin utama anda.');
     });
     window.addEventListener('hashchange', () => { if (location.hash.indexOf('#/k/') === 0) hideBanner(); });
     refresh();
@@ -906,7 +912,7 @@ window.KD = window.KD || {};
   /** Mesti dipanggil daripada klik pengguna (kebenaran pelayar). @return {Promise<boolean>} */
   async function enablePush() {
     const state = pushState();
-    if (state === 'needs-install') { showGuide(); KD.ui.toast('Pada iPhone, pasang Kirim Doa di skrin utama dahulu, kemudian hidupkan notifikasi dari aplikasi.'); return false; }
+    if (state === 'needs-install') { showGuide(); KD.ui.toast('Pada iPhone, pasang Titipan Hati di skrin utama dahulu, kemudian hidupkan notifikasi dari aplikasi.'); return false; }
     if (state === 'unconfigured' || state === 'unsupported') { KD.ui.toast('Notifikasi telefon tidak disokong pada pelayar ini.', 'error'); return false; }
     const perm = await Notification.requestPermission();
     if (perm !== 'granted') {
@@ -968,7 +974,7 @@ window.KD = window.KD || {};
     'on': 'Hidup pada peranti ini. Anda akan dimaklumkan apabila doa baharu tiba atau doa anda dibacakan.',
     'off': 'Dapatkan notifikasi di telefon apabila seseorang mengirim doa kepada anda.',
     'denied': 'Notifikasi disekat oleh pelayar. Benarkan dalam tetapan pelayar/telefon untuk laman ini, kemudian cuba semula.',
-    'needs-install': 'Pada iPhone, pasang Kirim Doa di skrin utama dahulu, kemudian hidupkan notifikasi dari aplikasi.',
+    'needs-install': 'Pada iPhone, pasang Titipan Hati di skrin utama dahulu, kemudian hidupkan notifikasi dari aplikasi.',
     'unsupported': 'Pelayar ini tidak menyokong notifikasi telefon. Cuba Google Chrome (Android) atau Safari (iPhone).',
     'unconfigured': ''
   };
@@ -1095,7 +1101,7 @@ window.KD = window.KD || {};
     { path: '/log-masuk', view: 'login', access: 'guest', layout: 'public', title: 'Log Masuk' },
     { path: '/daftar', view: 'register', access: 'guest', layout: 'public', title: 'Daftar Baru' },
     { path: '/lupa-kata-laluan', view: 'forgot', access: 'guest', layout: 'public', title: 'Lupa Kata Laluan' },
-    { path: '/k/:code', view: 'collect', access: 'public', layout: 'public', title: 'Kirim Doa' },
+    { path: '/k/:code', view: 'collect', access: 'public', layout: 'public', title: 'Titipan Hati' },
 
     { path: '/utama', view: 'dashboard', access: 'user', layout: 'app', title: 'Utama' },
     { path: '/hantar', view: 'compose', access: 'user', layout: 'app', title: 'Hantar Doa' },
@@ -1179,7 +1185,7 @@ window.KD = window.KD || {};
       router.current = { route: r, params: found.params, query: parseQuery(path), path };
       const view = KD.views[r.view];
       const container = KD.app.mount(r);
-      document.title = (r.title ? r.title + ' — ' : '') + ((KD.config && KD.config.SYSTEM_NAME) || 'Kirim Doa');
+      document.title = (r.title ? r.title + ' — ' : '') + ((KD.config && KD.config.SYSTEM_NAME) || 'Titipan Hati');
       syncTop(path);
       window.scrollTo(0, 0);
       try {
@@ -1249,16 +1255,16 @@ window.KD = window.KD || {};
       const nav = app.navItems(mode);
       qs('#root').innerHTML = html`<div class="shell">
         <aside class="sidebar" aria-label="Navigasi utama">
-          <a class="side-brand" href="#${mode === 'admin' ? '/admin' : '/utama'}">${star()}<span class="side-brand__name">${(KD.config && KD.config.SYSTEM_NAME) || 'Kirim Doa'}</span>${mode === 'admin' ? html`<span class="badge badge-gold">Pentadbir</span>` : ''}</a>
+          <a class="side-brand" href="#${mode === 'admin' ? '/admin' : '/utama'}">${star()}<span class="side-brand__name">${(KD.config && KD.config.SYSTEM_NAME) || 'Titipan Hati'}</span>${mode === 'admin' ? html`<span class="badge badge-gold">Pentadbir</span>` : ''}</a>
           <nav class="side-nav">${nav.map((n) => html`<a class="side-link" href="#${n[0]}" data-nav="${n[0]}">${icon(n[1])}<span>${n[2]}</span>${n[0] === '/notifikasi' ? html`<span class="badge-dot hidden" data-unread-dot></span>` : ''}</a>`)}</nav>
           ${auth.isAdmin() ? html`<div class="side-section">${mode === 'admin' ? 'Aplikasi' : 'Pentadbiran'}</div>
             <nav class="side-nav">${mode === 'admin' ? html`<a class="side-link" href="#/utama">${icon('home')}<span>Kembali ke aplikasi</span></a>` : html`<a class="side-link" href="#/admin">${icon('shield')}<span>Panel pentadbir</span></a>`}</nav>` : ''}
-          <div class="side-foot"><button class="side-link" style="width:100%" data-act="logout">${icon('logout')}<span>Log Keluar</span></button></div>
+          <div class="side-foot"><button class="side-link" style="width:100%" data-act="logout">${icon('logout')}<span>Log Keluar</span></button><div class="copyright side-copyright">${KD.ui.copyright()}</div></div>
         </aside>
         <div class="main">
           <header class="topbar">
             <button class="icon-btn hide-desktop" data-act="menu" aria-label="Menu">${icon('menu')}</button>
-            <a class="topbar__brand" href="#/utama">${star()}<span>${(KD.config && KD.config.SYSTEM_NAME) || 'Kirim Doa'}</span></a>
+            <a class="topbar__brand" href="#/utama">${star()}<span>${(KD.config && KD.config.SYSTEM_NAME) || 'Titipan Hati'}</span></a>
             <div class="topbar__title" data-title></div>
             <div class="topbar__actions">
               <a class="icon-btn" href="#/notifikasi" aria-label="Notifikasi">${icon('bell')}<span class="count-pill hidden" data-unread-count></span></a>
@@ -1424,22 +1430,23 @@ window.KD = window.KD || {};
 (function (KD) {
   'use strict';
   const { html, raw, qs, on, formData, fmtNum, requestId } = KD.utils;
-  const { icon, star, skyline, toast, toastError, busy, fieldErrors } = KD.ui;
+  const { icon, star, copyright, skyline, toast, toastError, busy, fieldErrors } = KD.ui;
   const cfg = () => KD.config || {};
 
   const BISMILLAH = 'بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ';
 
   function publicTop(dark) {
     const loggedIn = KD.auth.loggedIn();
-    return html`<header class="public-top"><a class="brand" href="#/">${star()}<span>${cfg().SYSTEM_NAME || 'Kirim Doa'}</span></a>
+    return html`<header class="public-top"><a class="brand" href="#/">${star()}<span>${cfg().SYSTEM_NAME || 'Titipan Hati'}</span></a>
       <nav class="row">${loggedIn
         ? html`<a class="btn ${dark ? 'btn-light' : 'btn-outline'} btn-sm" href="#/utama">Buka aplikasi</a>`
         : html`<a class="btn ${dark ? 'btn-light' : 'btn-ghost'} btn-sm" href="#/log-masuk">Log Masuk</a><a class="btn ${dark ? 'btn-cream' : 'btn-primary'} btn-sm" href="#/daftar">Daftar</a>`}</nav></header>`;
   }
 
   function publicFoot() {
-    return html`<footer class="public-foot"><nav><button class="btn-link" data-scroll="tentang">Tentang ${cfg().SYSTEM_NAME || 'Kirim Doa'}</button><button class="btn-link" data-scroll="panduan">Panduan</button><button class="btn-link" data-scroll="maklum-balas">Maklum Balas</button></nav>
-      <div>${cfg().SYSTEM_NAME || 'Kirim Doa'}: ${cfg().SYSTEM_TAGLINE || ''}${cfg().ORG_NAME ? html`<br>${cfg().ORG_NAME}` : ''}</div></footer>`;
+    return html`<footer class="public-foot"><nav><button class="btn-link" data-scroll="tentang">Tentang ${cfg().SYSTEM_NAME || 'Titipan Hati'}</button><button class="btn-link" data-scroll="panduan">Panduan</button><button class="btn-link" data-scroll="maklum-balas">Maklum Balas</button></nav>
+      <div>${cfg().SYSTEM_NAME || 'Titipan Hati'}: ${cfg().SYSTEM_TAGLINE || ''}${cfg().ORG_NAME ? html`<br>${cfg().ORG_NAME}` : ''}</div>
+      <div class="copyright">${copyright()}</div></footer>`;
   }
 
   function passwordField(name, label, autocomplete, hint) {
@@ -1467,14 +1474,14 @@ window.KD = window.KD || {};
           <div class="hero__arch arch">
             ${star('hero__star')}
             <div class="hero__bismillah arabic" lang="ar">${BISMILLAH}</div>
-            <h1 class="hero__title">${c.SYSTEM_NAME || 'Kirim Doa'}</h1>
-            <p class="hero__tag">${c.SYSTEM_TAGLINE || 'Doa anda, cahaya hati'}</p>
+            <h1 class="hero__title">${c.SYSTEM_NAME || 'Titipan Hati'}</h1>
+            <p class="hero__tag">${c.SYSTEM_TAGLINE || 'Titipkan doa, kami sampaikan'}</p>
             <p class="hero__msg">${c.LANDING_MESSAGE || ''}</p>
             <div class="hero__cta">
               ${KD.auth.loggedIn() ? html`<a class="btn btn-cream btn-lg" href="#/hantar">${icon('send')}Hantar Doa</a><a class="btn btn-light btn-lg" href="#/utama">Buka aplikasi</a>`
                 : html`${c.ALLOW_REGISTRATION !== false ? html`<a class="btn btn-cream btn-lg" href="#/daftar">Daftar Baru</a>` : ''}<a class="btn btn-light btn-lg" href="#/log-masuk">Log Masuk</a>`}
             </div>
-            <p class="hero__count">Sebanyak <strong>${fmtNum(c.TOTAL_DOA || 0)}</strong> doa telah dikirim melalui ${c.SYSTEM_NAME || 'Kirim Doa'}</p>
+            <p class="hero__count">Sebanyak <strong>${fmtNum(c.TOTAL_DOA || 0)}</strong> doa telah dikirim melalui ${c.SYSTEM_NAME || 'Titipan Hati'}</p>
           </div>
           <div class="hero__skyline">${skyline}</div>
         </section>
@@ -1497,8 +1504,8 @@ window.KD = window.KD || {};
           <div class="about">
             <blockquote class="about__quote">“Dan Tuhanmu berfirman: Berdoalah kepada-Ku, nescaya Aku perkenankan bagimu.”<small>Surah Ghafir, ayat 60</small></blockquote>
             <div>
-              <h2>Tentang ${c.SYSTEM_NAME || 'Kirim Doa'}</h2>
-              <p class="mt-3">Ramai yang berpesan, “Doakan saya di sana.” Pesanan itu mudah hilang dalam mesej yang bertimbun. ${c.SYSTEM_NAME || 'Kirim Doa'} menyimpan setiap hajat dengan kemas, mengikut kategori, supaya tiada doa yang tertinggal.</p>
+              <h2>Tentang ${c.SYSTEM_NAME || 'Titipan Hati'}</h2>
+              <p class="mt-3">Ramai yang berpesan, “Doakan saya di sana.” Pesanan itu mudah hilang dalam mesej yang bertimbun. ${c.SYSTEM_NAME || 'Titipan Hati'} menyimpan setiap hajat dengan kemas, mengikut kategori, supaya tiada doa yang tertinggal.</p>
               <p>Doa anda adalah peribadi. Hanya anda dan penerima boleh membacanya, dan pengirim boleh memilih untuk kekal tanpa nama.</p>
             </div>
           </div>
@@ -1898,7 +1905,7 @@ window.KD = window.KD || {};
   KD.views.markPrayed = markPrayed;
 
   async function shareDoa(d) {
-    const text = (d.title ? d.title + '\n\n' : '') + d.text + '\n\n— ' + ((KD.config && KD.config.SYSTEM_NAME) || 'Kirim Doa');
+    const text = (d.title ? d.title + '\n\n' : '') + d.text + '\n\n— ' + ((KD.config && KD.config.SYSTEM_NAME) || 'Titipan Hati');
     if (navigator.share) {
       try { await navigator.share({ text }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
     }
@@ -2355,8 +2362,8 @@ window.KD = window.KD || {};
       const u = KD.auth.user() || {};
       const pwaPanel = KD.pwa && KD.pwa.isWeb() ? html`<section class="panel app-panel" style="margin-bottom:var(--sp-6)"><div class="app-panel__icon"><img src="icons/icon-192.png" alt="" width="48" height="48"></div>
           <div class="grow"><h3>Aplikasi telefon</h3>
-            <p class="small muted hidden" data-pwa-installed>${icon('check', 'i-sm')} Anda sedang menggunakan aplikasi Kirim Doa yang dipasang.</p>
-            <p class="small muted" data-pwa-hint>Pasang Kirim Doa di skrin utama telefon untuk dibuka dengan satu sentuhan — sesuai dibawa ke Tanah Suci.</p></div>
+            <p class="small muted hidden" data-pwa-installed>${icon('check', 'i-sm')} Anda sedang menggunakan aplikasi Titipan Hati yang dipasang.</p>
+            <p class="small muted" data-pwa-hint>Pasang Titipan Hati di skrin utama telefon untuk dibuka dengan satu sentuhan — sesuai dibawa ke Tanah Suci.</p></div>
           <button class="btn btn-gold hidden" data-pwa-install data-act="pwa-install">${icon('download')}Pasang aplikasi</button>
           <div class="push-panel hidden" data-push-panel><div class="grow"><h4>${icon('bell', 'i-sm')} Notifikasi telefon</h4><p class="small muted" data-push-text></p></div>
             <div class="row row-wrap"><button class="btn btn-primary hidden" data-push-on>${icon('bell')}Hidupkan notifikasi</button>
@@ -3392,13 +3399,13 @@ window.KD = window.KD || {};
       on(el, 'submit', 'form', (e, f) => { e.preventDefault(); run(qs('button[type="submit"]', f)); });
       on(el, 'click', '[data-act="csv"]', () => {
         if (!report) return;
-        const rows = [['Laporan Kirim Doa', report.range.from, report.range.to], [], ['Ringkasan', 'Nilai']];
+        const rows = [['Laporan Titipan Hati', report.range.from, report.range.to], [], ['Ringkasan', 'Nilai']];
         Object.keys(report.summary).forEach((k) => rows.push([k, report.summary[k]]));
         [['Mengikut hari', report.byDay], ['Mengikut kategori', report.byCategory], ['Mengikut sumber', report.bySource], ['Mengikut penerima', report.byRecipientType], ['Pautan paling aktif', report.topLinks]].forEach((sec) => {
           rows.push([], [sec[0], 'Bilangan']);
           sec[1].forEach((x) => rows.push([x.label, x.value]));
         });
-        downloadText(toCsv(rows), 'text/csv;charset=utf-8', 'laporan-kirimdoa-' + report.range.from + '_' + report.range.to + '.csv');
+        downloadText(toCsv(rows), 'text/csv;charset=utf-8', 'laporan-titipanhati-' + report.range.from + '_' + report.range.to + '.csv');
       });
       on(el, 'click', '[data-act="print"]', () => window.print());
       run(qs('button[type="submit"]', el));
@@ -3478,7 +3485,7 @@ window.KD = window.KD || {};
           qs('[data-mig]', el).innerHTML = html`${mig.map((m) => html`<div class="health-row"><span class="status-dot ${m.appliedAt ? 'status-ok' : 'status-warn'}"></span><div class="grow"><div class="cell-strong small">${m.id}</div><div class="xs muted">${m.description}</div></div><span class="xs muted">${m.appliedAt ? fmtDate(m.appliedAt, true) : 'Tertunda'}</span></div>`)}<p class="xs muted mt-3">Migrasi baharu dijalankan oleh pemilik skrip melalui fungsi runMigration() dalam editor Apps Script.</p>`.s;
           qs('[data-bk]', el).innerHTML = html`<div class="health-row"><span class="status-dot ${health.backup.ok ? 'status-ok' : 'status-warn'}"></span><div class="grow small">Sandaran terakhir</div><strong class="small">${health.backup.lastBackupAt ? fmtDate(health.backup.lastBackupAt, true) : 'Belum pernah'}</strong></div>
             <div class="health-row"><span class="status-dot ${health.script.maintenanceTriggerInstalled ? 'status-ok' : 'status-warn'}"></span><div class="grow small">Sandaran automatik harian</div><strong class="small">${health.script.maintenanceTriggerInstalled ? 'Aktif' : 'Belum dipasang'}</strong></div>
-            <p class="xs muted mt-3">Salinan penuh spreadsheet disimpan dalam folder "Kirim Doa Backup" (30 salinan terkini).</p>`.s;
+            <p class="xs muted mt-3">Salinan penuh spreadsheet disimpan dalam folder "Titipan Hati Backup" (30 salinan terkini).</p>`.s;
           qs('[data-logs]', el).innerHTML = logs.length ? html`<div class="table-wrap"><table class="table"><thead><tr><th>Masa</th><th>ID ralat</th><th>Tindakan</th><th>Mesej</th></tr></thead><tbody>${logs.map((l) => html`<tr><td class="nowrap">${fmtDate(l.createdAt, true)}</td><td class="xs nowrap">${l.errorId}</td><td>${l.action || '—'}</td><td class="small">${l.message}</td></tr>`)}</tbody></table></div>`.s : html`<p class="muted small" style="padding:0 24px 24px">Tiada ralat direkodkan. Alhamdulillah.</p>`.s;
         } catch (err) { qs('[data-mig]', el).innerHTML = errorState(err, 'reload').s; }
       };
