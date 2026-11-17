@@ -1813,7 +1813,7 @@ window.KD = window.KD || {};
         <div><dt>Untuk</dt><dd>${toLabel(d)}</dd></div>
         <div><dt>Tarikh</dt><dd>${fmtDate(d.createdAt, true)}</dd></div>
         <div><dt>Sumber</dt><dd>${d.source === 'LINK' ? 'Pautan Kumpul Doa' : 'Aplikasi'}</dd></div>
-        <div><dt>Privasi</dt><dd>${d.isAnonymous ? 'Tanpa nama' : 'Bernama'}</dd></div>
+        ${d.recipientType === 'SELF' ? '' : html`<div><dt>Nama pengirim</dt><dd>${d.isAnonymous ? 'Dirahsiakan' : 'Dipaparkan'}</dd></div>`}
         <div><dt>Status</dt><dd data-prayed>${prayedStatus(d)}</dd></div>
       </dl>
       <div class="mt-4" data-wa>${waPrayedButton(d)}</div>`.s;
