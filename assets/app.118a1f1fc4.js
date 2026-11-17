@@ -1755,8 +1755,9 @@ window.KD = window.KD || {};
     const name = d.isAnonymous ? '' : ' ' + d.senderName;
     const holy = /^(UMRAH|HAJI)$/.test(d.occasion || '') ? ' di Tanah Suci' : '';
     const what = d.title ? ' "' + d.title + '"' : '';
-    const msg = 'Assalamualaikum' + name + '.\n\nAlhamdulillah, doa yang anda kirimkan' + what + ' telah saya bacakan' + holy +
-      '. Semoga Allah memakbulkannya dan membalas kebaikan anda.\n\n— ' + (me.fullName || d.ownerName || '');
+    // Ayat sama seperti CONFIG.PRAYED_DOA_PREFIX / PRAYED_DOA_DUA (Config.gs)
+    const msg = 'Assalamualaikum' + name + '.\n\nAlhamdulillah, doa kiriman anda' + what + ' telah dibaca' + holy +
+      '. Semoga Allah memakbulkan segala doa² itu pada waktu terbaik & cara paling indah menurut perancanganNya 🤲✨\n\n— ' + (me.fullName || d.ownerName || '');
     return WA_BASE + d.senderWhatsApp + '?text=' + encodeURIComponent(msg);
   }
   const waPrayedButton = (d) => (d.isPrayed && d.senderWhatsApp
